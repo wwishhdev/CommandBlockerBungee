@@ -1,0 +1,83 @@
+#  ____                                          _ ____  _            _
+# / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| | __ )| | ___   ___| | _____ _ __
+#| |   / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` |  _ \| |/ _ \ / __| |/ / _ \ '__|
+#| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |
+# \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|____/|_|\___/ \___|_|\_\___|_|
+#
+# CommandBlockerBungee v1.0.3
+# Author: wwishh
+# Support: discord.gg/m8V9pns6dB
+#
+# Compatible with BungeeCord 1.8.x - 1.21.x
+
+# =============================================================================
+# Messages Configuration
+# All messages support color codes using & symbol
+# Available placeholders: {player}, {command}, {time}, {error}
+# =============================================================================
+messages:
+  block-message: '&cThis command is blocked.'
+  reload-success: '&aCommandBlocker has been reloaded successfully!'
+  reload-error: '&cError reloading configuration: {error}'
+  no-permission: '&cYou don''t have permission to use this command.'
+  console-reload: 'Configuration reloaded by {player}'
+
+# =============================================================================
+# Permissions Configuration
+# Default permissions:
+# - commandblocker.bypass: Allows using blocked commands
+# - commandblocker.reload: Allows reloading the plugin
+# - commandblocker.notify: Receives notifications
+# - commandblocker.*: Grants all permissions
+# =============================================================================
+bypass-permission: 'commandblocker.bypass'
+
+# =============================================================================
+# Alias Detection Configuration
+# Prevents players from bypassing command blocks using aliases
+# =============================================================================
+alias-detection:
+  enabled: true              # Master switch for alias detection
+  block-help-subcommand: true    # Blocks commands like "op help"
+  block-advanced-variant: true    # Blocks commands like "opadvanced"
+  block-plugin-prefix: true      # Blocks commands like "bukkit:op"
+  block-short-version: true      # Blocks shortened versions (e.g., "pl" for "plugins")
+
+# =============================================================================
+# Blocked Commands List
+# Add commands without the '/' prefix
+# Examples: 'op', 'deop', 'reload', etc.
+# =============================================================================
+blocked-commands:
+  - 'op'
+  - 'deop'
+  - 'reload'
+  - 'rl'
+  - 'timings'
+
+# =============================================================================
+# Cooldown System Configuration
+# Prevents command spam by limiting attempts
+# =============================================================================
+cooldown:
+  enabled: true             # Enable/disable the cooldown system
+  max-attempts: 3           # Number of attempts before timeout
+  timeout-duration: 300     # Timeout duration in seconds (300 = 5 minutes)
+  reset-after: 600         # Time to reset attempts counter (600 = 10 minutes)
+  timeout-message: '&cYou have exceeded the attempt limit. Wait &e{time} &cto try again.'
+
+# =============================================================================
+# Staff Notification System
+# Alerts staff members when players try to use blocked commands
+# =============================================================================
+notifications:
+  enabled: true                # Enable/disable staff notifications
+  permission: 'commandblocker.notify'  # Permission to receive notifications
+  notify-on-timeout: true      # Notify when a player gets timeout
+  command-message: '&e{player} &7tried to use blocked command: &c{command}'
+  timeout-message: '&e{player} &7has been timed out for exceeding attempts.'
+
+# =============================================================================
+# Need more help?
+# Join our Discord server: discord.gg/m8V9pns6dB
+# =============================================================================

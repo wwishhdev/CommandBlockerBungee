@@ -1,0 +1,22 @@
+name: CommandBlockerBungee
+version: 1.0.3
+main: com.wish.commandblockerbungee.CommandBlockerBungee
+author: wwishh
+description: A plugin to block commands in BungeeCord
+
+permissions:
+  commandblocker.*:
+    description: Gives access to all CommandBlocker features
+    children:
+      commandblocker.bypass: true
+      commandblocker.reload: true
+      commandblocker.notify: true
+  commandblocker.bypass:
+    description: Allows using blocked commands
+    default: op
+  commandblocker.reload:
+    description: Allows reloading the plugin configuration
+    default: op
+  commandblocker.notify:
+    description: Receives notifications when someone tries to use blocked commands
+    default: op
