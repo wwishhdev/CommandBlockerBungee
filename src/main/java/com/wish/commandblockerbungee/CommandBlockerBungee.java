@@ -72,14 +72,16 @@ public class CommandBlockerBungee extends Plugin implements Listener {
         getProxy().getPluginManager().registerListener(this, this);
         getProxy().getPluginManager().registerCommand(this, new ReloadCommand());
         getProxy().getConsole().sendMessage(ChatColor.GOLD + "\n" +
-                "   ____                                          _ ____  _            _             \n" +
-                "  / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| | __ )| | ___   ___| | _____ _ __ \n" +
-                " | |   / _ \\| '_ ` _ \\| '_ ` _ \\ / _` | '_ \\ / _` |  _ \\| |/ _ \\ / __| |/ / _ \\ '__|\n" +
-                " | |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |   \n" +
-                "  \\____\\___/|_| |_| |_|_| |_| |_|\\__,_|_| |_|\\__,_|____/|_|\\___/ \\___|_|\\_\\___|_|   \n" +
-                "                                                                                       \n" +
+                " ██████╗ ██████╗ ███╗   ███╗███╗   ███╗ █████╗ ███╗   ██╗██████╗ ██████╗ ██╗      ██████╗  ██████╗██╗  ██╗███████╗██████╗ \n" +
+                "██╔════╝██╔═══██╗████╗ ████║████╗ ████║██╔══██╗████╗  ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗\n" +
+                "██║     ██║   ██║██╔████╔██║██╔████╔██║███████║██╔██╗ ██║██║  ██║██████╔╝██║     ██║   ██║██║     █████╔╝ █████╗  ██████╔╝\n" +
+                "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
+                "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
+                " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
                 ChatColor.YELLOW + "                Thanks for using CommandBlockerBungee! " + ChatColor.RED + "❤\n" +
-                ChatColor.AQUA + "                                                          by wwishh\n");
+                ChatColor.AQUA + "                                                          by wwishh\n" +
+                ChatColor.GREEN + "        If you like the plugin, please leave a review at: " +
+                ChatColor.GOLD + "https://www.spigotmc.org/resources/❌-commandblockerbungee-1-8-1-21.120890/\n");
 
         getLogger().info("CommandBlockerBungee has been enabled! by wwishh <3");
         playerAttempts = new HashMap<>();
