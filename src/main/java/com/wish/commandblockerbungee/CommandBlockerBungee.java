@@ -31,11 +31,12 @@ public class CommandBlockerBungee extends Plugin implements Listener {
     private List<String> blockedCommands;
     private String blockMessage;
     private String bypassPermission;
+    private List<String> allowedCommands;
+    private boolean allowedCommandsEnabled;
 
     // Variables para la detección de aliases
     private boolean aliasDetectionEnabled;
     private boolean blockHelpSubcommand;
-    private boolean blockAdvancedVariant;
     private boolean blockPluginPrefix;
     private boolean blockShortVersion;
 
@@ -128,9 +129,11 @@ public class CommandBlockerBungee extends Plugin implements Listener {
         // Cargar configuración de detección de aliases
         aliasDetectionEnabled = configuration.getBoolean("alias-detection.enabled", true);
         blockHelpSubcommand = configuration.getBoolean("alias-detection.block-help-subcommand", true);
-        blockAdvancedVariant = configuration.getBoolean("alias-detection.block-advanced-variant", true);
         blockPluginPrefix = configuration.getBoolean("alias-detection.block-plugin-prefix", true);
         blockShortVersion = configuration.getBoolean("alias-detection.block-short-version", true);
+
+        allowedCommandsEnabled = configuration.getBoolean("allowed-commands-settings.enabled", true);
+        allowedCommands = configuration.getStringList("allowed-commands-settings.commands");
 
         // Nuevos mensajes
         reloadSuccessMessage = ChatColor.translateAlternateColorCodes('&',
@@ -164,27 +167,41 @@ public class CommandBlockerBungee extends Plugin implements Listener {
             return false;
         }
 
-        if (!aliasDetectionEnabled) {
-            try {
-                return blockedCommands.contains(command.toLowerCase().replaceFirst("/", ""));
-            } catch (Exception e) {
-                getLogger().warning("Error al verificar comando bloqueado: " + e.getMessage());
-                return false;
-            }
-        }
-
         try {
-            command = command.toLowerCase();
-
-            if (command.startsWith("/")) {
-                command = command.substring(1);
+            // Remover el slash inicial si existe
+            String cleanCommand = command.toLowerCase();
+            if (cleanCommand.startsWith("/")) {
+                cleanCommand = cleanCommand.substring(1);
             }
 
-            String[] parts = command.split(" ", 2);
+            // Obtener el comando base (sin argumentos)
+            String[] parts = cleanCommand.split(" ", 2);
             String baseCommand = parts[0];
 
             if (baseCommand.isEmpty()) {
                 return false;
+            }
+
+            // Verificar si el comando está en la lista de permitidos
+            if (allowedCommandsEnabled) {
+                for (String allowedCmd : allowedCommands) {
+                    if (allowedCmd == null) continue;
+
+                    allowedCmd = allowedCmd.toLowerCase();
+                    // Verificar comando exacto
+                    if (baseCommand.equals(allowedCmd)) {
+                        return false;
+                    }
+
+                    // Verificar si el comando comienza con el comando permitido
+                    if (cleanCommand.startsWith(allowedCmd + " ")) {
+                        return false;
+                    }
+                }
+            }
+
+            if (!aliasDetectionEnabled) {
+                return blockedCommands.contains(baseCommand);
             }
 
             for (String blockedCmd : blockedCommands) {
@@ -199,13 +216,6 @@ public class CommandBlockerBungee extends Plugin implements Listener {
 
                 // Verificar prefijo de plugin si está habilitado
                 if (blockPluginPrefix && baseCommand.startsWith(blockedCmd + ":")) {
-                    return true;
-                }
-
-                // Verificar variante "advanced" si está habilitada
-                if (blockAdvancedVariant && (
-                        baseCommand.equals(blockedCmd + "advanced") ||
-                                baseCommand.startsWith(blockedCmd + " advanced"))) {
                     return true;
                 }
 
@@ -238,12 +248,6 @@ public class CommandBlockerBungee extends Plugin implements Listener {
             if (blockHelpSubcommand && (
                     command.equals(pattern + "help") ||
                             command.startsWith(pattern + " help"))) {
-                return true;
-            }
-
-            if (blockAdvancedVariant && (
-                    command.equals(pattern + "advanced") ||
-                            command.startsWith(pattern + " advanced"))) {
                 return true;
             }
         }
