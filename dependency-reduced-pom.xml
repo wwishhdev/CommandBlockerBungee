@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.wish</groupId>
   <artifactId>CommandBlockerBungee</artifactId>
-  <version>1.0.3</version>
+  <version>1.0.4</version>
   <description>A plugin to block commands in BungeeCord</description>
   <build>
     <defaultGoal>clean package</defaultGoal>
