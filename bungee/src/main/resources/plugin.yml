@@ -1,7 +1,7 @@
 name: CommandBlockerBungee
-version: 1.0.4
+version: 2.0.0
 main: com.wish.commandblockerbungee.CommandBlockerBungee
-author: wwishh
+author: wwishhdev
 description: A plugin to block commands in BungeeCord
 
 permissions:

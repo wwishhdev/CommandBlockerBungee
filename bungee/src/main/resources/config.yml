@@ -4,22 +4,19 @@
 #| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |
 # \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|____/|_|\___/ \___|_|\_\___|_|
 #
-# CommandBlockerBungee v1.0.4
-# Author: wwishh
-# Support: discord.gg/m8V9pns6dB
-#
-# Compatible with BungeeCord 1.8.x - 1.21.x
+# CommandBlockerBungee v2.0.0
+# Author: wwishhdev
 
 # =============================================================================
 # Messages Configuration
-# All messages support color codes using & symbol
+# Supports MiniMessage (<red>, <gradient:red:blue>, <#ff0000>) and Legacy (&c)
 # Available placeholders: {player}, {command}, {time}, {error}
 # =============================================================================
 messages:
-  block-message: '&cThis command is blocked.'
-  reload-success: '&aCommandBlocker has been reloaded successfully!'
-  reload-error: '&cError reloading configuration: {error}'
-  no-permission: '&cYou don''t have permission to use this command.'
+  block-message: '<red>This command is blocked.'
+  reload-success: '<green>CommandBlocker has been reloaded successfully!'
+  reload-error: '<red>Error reloading configuration: {error}'
+  no-permission: '<red>You don''t have permission to use this command.'
   console-reload: 'Configuration reloaded by {player}'
 
 # =============================================================================
@@ -39,8 +36,7 @@ bypass-permission: 'commandblocker.bypass'
 alias-detection:
   enabled: true              # Master switch for alias detection
   block-help-subcommand: true    # Blocks commands like "op help"
-  block-plugin-prefix: true      # Blocks commands like "bukkit:op"
-  block-short-version: true      # Blocks shortened versions (e.g., "pl" for "plugins")
+  block-plugin-prefix: true      # Blocks commands like "minecraft:op"
 
 # =============================================================================
 # Blocked Commands List
@@ -53,6 +49,8 @@ blocked-commands:
   - 'reload'
   - 'rl'
   - 'timings'
+  - 'plugins'
+  - 'pl'
 
 # =============================================================================
 # Allowed Commands List
@@ -77,7 +75,7 @@ cooldown:
   max-attempts: 3           # Number of attempts before timeout
   timeout-duration: 300     # Timeout duration in seconds (300 = 5 minutes)
   reset-after: 600         # Time to reset attempts counter (600 = 10 minutes)
-  timeout-message: '&cYou have exceeded the attempt limit. Wait &e{time} &cto try again.'
+  timeout-message: '<red>You have exceeded the attempt limit. Wait <yellow>{time} <red>to try again.'
 
 # =============================================================================
 # Staff Notification System
@@ -87,10 +85,5 @@ notifications:
   enabled: true                # Enable/disable staff notifications
   permission: 'commandblocker.notify'  # Permission to receive notifications
   notify-on-timeout: true      # Notify when a player gets timeout
-  command-message: '&e{player} &7tried to use blocked command: &c{command}'
-  timeout-message: '&e{player} &7has been timed out for exceeding attempts.'
-
-# =============================================================================
-# Need more help?
-# Join our Discord server: discord.gg/m8V9pns6dB
-# =============================================================================
+  command-message: '<yellow>{player} <gray>tried to use blocked command: <red>{command}'
+  timeout-message: '<yellow>{player} <gray>has been timed out for exceeding attempts.'

@@ -1,0 +1,89 @@
+#  ____                                          _ ____  _            _
+# / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| | __ )| | ___   ___| | _____ _ __
+#| |   / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` |  _ \| |/ _ \ / __| |/ / _ \ '__|
+#| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |
+# \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|____/|_|\___/ \___|_|\_\___|_|
+#
+# CommandBlockerVelocity v2.0.0
+# Author: wwishhdev
+
+# =============================================================================
+# Messages Configuration
+# Supports MiniMessage (<red>, <gradient:red:blue>, <#ff0000>) and Legacy (&c)
+# Available placeholders: {player}, {command}, {time}, {error}
+# =============================================================================
+messages:
+  block-message: '<red>This command is blocked.'
+  reload-success: '<green>CommandBlocker has been reloaded successfully!'
+  reload-error: '<red>Error reloading configuration: {error}'
+  no-permission: '<red>You don''t have permission to use this command.'
+  console-reload: 'Configuration reloaded by {player}'
+
+# =============================================================================
+# Permissions Configuration
+# Default permissions:
+# - commandblocker.bypass: Allows using blocked commands
+# - commandblocker.reload: Allows reloading the plugin
+# - commandblocker.notify: Receives notifications
+# - commandblocker.*: Grants all permissions
+# =============================================================================
+bypass-permission: 'commandblocker.bypass'
+
+# =============================================================================
+# Alias Detection Configuration
+# Prevents players from bypassing command blocks using aliases
+# =============================================================================
+alias-detection:
+  enabled: true              # Master switch for alias detection
+  block-help-subcommand: true    # Blocks commands like "op help"
+  block-plugin-prefix: true      # Blocks commands like "minecraft:op"
+
+# =============================================================================
+# Blocked Commands List
+# Add commands without the '/' prefix
+# Examples: 'op', 'deop', 'reload', etc.
+# =============================================================================
+blocked-commands:
+  - 'op'
+  - 'deop'
+  - 'reload'
+  - 'rl'
+  - 'timings'
+  - 'plugins'
+  - 'pl'
+
+# =============================================================================
+# Allowed Commands List
+# Commands in this list will be allowed regardless of other settings
+# Add commands without the '/' prefix
+# Examples: 'help', 'ping', etc.
+# =============================================================================
+allowed-commands-settings:
+  enabled: true  # Enable/disable the allowed commands system
+  commands:
+    - 'help'
+    - 'ping'
+    - 'tell'
+    - 'msg'
+
+# =============================================================================
+# Cooldown System Configuration
+# Prevents command spam by limiting attempts
+# =============================================================================
+cooldown:
+  enabled: true             # Enable/disable the cooldown system
+  max-attempts: 3           # Number of attempts before timeout
+  timeout-duration: 300     # Timeout duration in seconds (300 = 5 minutes)
+  reset-after: 600         # Time to reset attempts counter (600 = 10 minutes)
+  timeout-message: '<red>You have exceeded the attempt limit. Wait <yellow>{time} <red>to try again.'
+
+# =============================================================================
+# Staff Notification System
+# Alerts staff members when players try to use blocked commands
+# =============================================================================
+notifications:
+  enabled: true                # Enable/disable staff notifications
+  permission: 'commandblocker.notify'  # Permission to receive notifications
+  notify-on-timeout: true      # Notify when a player gets timeout
+  command-message: '<yellow>{player} <gray>tried to use blocked command: <red>{command}'
+  timeout-message: '<yellow>{player} <gray>has been timed out for exceeding attempts.'
