@@ -1,6 +1,7 @@
 package com.wish.commandblockerbungee.managers;
 
 import com.wish.commandblockerbungee.CommandBlockerBungee;
+import com.wish.commandblockerbungee.utils.NotificationAction;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -12,8 +13,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class ConfigManager {
@@ -159,5 +161,105 @@ public class ConfigManager {
     public String escape(String text) {
         if (text == null) return "";
         return miniMessage.escapeTags(text);
+    }
+
+    // ========================================================================
+    // Database Settings
+    // ========================================================================
+    public boolean isDatabaseEnabled() {
+        return configuration.getBoolean("database.enabled", false);
+    }
+
+    public String getDatabaseType() {
+        return configuration.getString("database.type", "sqlite");
+    }
+
+    public String getDatabaseHost() {
+        return configuration.getString("database.host", "localhost");
+    }
+
+    public int getDatabasePort() {
+        return configuration.getInt("database.port", 3306);
+    }
+
+    public String getDatabaseUser() {
+        return configuration.getString("database.user", "root");
+    }
+
+    public String getDatabasePassword() {
+        return configuration.getString("database.password", "");
+    }
+
+    public String getDatabaseName() {
+        return configuration.getString("database.database", "minecraft");
+    }
+
+    public String getDatabaseTablePrefix() {
+        return configuration.getString("database.table-prefix", "cb_");
+    }
+
+    // ========================================================================
+    // Discord Webhook
+    // ========================================================================
+    public boolean isWebhookEnabled() {
+        return configuration.getBoolean("discord-webhook.enabled", false);
+    }
+
+    public String getWebhookUrl() {
+        return configuration.getString("discord-webhook.url", "");
+    }
+
+    public String getWebhookUsername() {
+        return configuration.getString("discord-webhook.username", "CommandBlocker");
+    }
+
+    public String getWebhookAvatarUrl() {
+        return configuration.getString("discord-webhook.avatar-url", "");
+    }
+
+    public String getWebhookContent() {
+        return configuration.getString("discord-webhook.content", "**{player}** tried to use blocked command: `{command}`");
+    }
+
+    // ========================================================================
+    // Notification Actions
+    // ========================================================================
+    public boolean isNotificationActionsEnabled() {
+        return configuration.getBoolean("notification-actions.enabled", false);
+    }
+
+    public List<NotificationAction> getNotificationActions() {
+        List<NotificationAction> actions = new ArrayList<>();
+        List<?> list = configuration.getList("notification-actions.actions");
+        
+        if (list != null) {
+            for (Object obj : list) {
+                if (obj instanceof Map) {
+                    Map<?, ?> map = (Map<?, ?>) obj;
+                    String label = (String) map.get("label");
+                    String hover = (String) map.get("hover");
+                    String command = (String) map.get("command");
+                    if (label != null && command != null) {
+                        actions.add(new NotificationAction(label, hover, command));
+                    }
+                }
+            }
+        }
+        return actions;
+    }
+
+    // ========================================================================
+    // Granular Permissions
+    // ========================================================================
+    public String getBypassAllPermission() {
+        return configuration.getString("permissions.bypass-all", "commandblocker.bypass");
+    }
+
+    public String getBypassBlockPermission() {
+        return configuration.getString("permissions.bypass-block", "commandblocker.bypass.block");
+    }
+
+    public String getBypassCooldownPermission() {
+        return configuration.getString("permissions.bypass-cooldown", "commandblocker.bypass.cooldown");
     }
 }

@@ -1,10 +1,12 @@
 package com.wish.commandblockerbungee;
 
 import com.wish.commandblockerbungee.commands.ReloadCommand;
+import com.wish.commandblockerbungee.database.DatabaseManager;
 import com.wish.commandblockerbungee.listeners.ChatListener;
 import com.wish.commandblockerbungee.listeners.ConnectionListener;
 import com.wish.commandblockerbungee.managers.ConfigManager;
 import com.wish.commandblockerbungee.managers.CooldownManager;
+import com.wish.commandblockerbungee.managers.WebhookManager;
 import net.kyori.adventure.platform.bungeecord.BungeeAudiences;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.plugin.Plugin;
@@ -14,6 +16,8 @@ public class CommandBlockerBungee extends Plugin {
 
     private ConfigManager configManager;
     private CooldownManager cooldownManager;
+    private DatabaseManager databaseManager;
+    private WebhookManager webhookManager;
     private BungeeAudiences adventure;
 
     @Override
@@ -30,18 +34,23 @@ public class CommandBlockerBungee extends Plugin {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                ChatColor.YELLOW + "                CommandBlockerBungee v2.0.0 " + ChatColor.RED + "❤\n" +
+                ChatColor.YELLOW + "                CommandBlockerBungee v2.1.0 " + ChatColor.RED + "❤\n" +
                 ChatColor.AQUA + "                                                          by wwishhdev\n"
         ));
 
         // Managers
         this.configManager = new ConfigManager(this);
         this.configManager.loadConfiguration();
+        
+        this.databaseManager = new DatabaseManager(this, configManager);
+        this.databaseManager.init();
+        
+        this.webhookManager = new WebhookManager(this, configManager);
 
-        this.cooldownManager = new CooldownManager(this, configManager);
+        this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
         // Listeners & Commands
-        getProxy().getPluginManager().registerListener(this, new ChatListener(this, configManager, cooldownManager));
+        getProxy().getPluginManager().registerListener(this, new ChatListener(this, configManager, cooldownManager, webhookManager));
         getProxy().getPluginManager().registerListener(this, new ConnectionListener(cooldownManager));
         getProxy().getPluginManager().registerCommand(this, new ReloadCommand(this));
 
@@ -59,6 +68,9 @@ public class CommandBlockerBungee extends Plugin {
         }
         if (cooldownManager != null) {
             cooldownManager.clear();
+        }
+        if (databaseManager != null) {
+            databaseManager.close();
         }
         getLogger().info("CommandBlockerBungee has been disabled!");
     }

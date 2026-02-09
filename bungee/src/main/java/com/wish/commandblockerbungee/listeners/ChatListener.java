@@ -3,6 +3,12 @@ package com.wish.commandblockerbungee.listeners;
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import com.wish.commandblockerbungee.managers.ConfigManager;
 import com.wish.commandblockerbungee.managers.CooldownManager;
+import com.wish.commandblockerbungee.managers.WebhookManager;
+import com.wish.commandblockerbungee.utils.NotificationAction;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.event.ChatEvent;
 import net.md_5.bungee.api.event.TabCompleteEvent;
@@ -17,11 +23,13 @@ public class ChatListener implements Listener {
     private final CommandBlockerBungee plugin;
     private final ConfigManager config;
     private final CooldownManager cooldownManager;
+    private final WebhookManager webhookManager;
 
-    public ChatListener(CommandBlockerBungee plugin, ConfigManager config, CooldownManager cooldownManager) {
+    public ChatListener(CommandBlockerBungee plugin, ConfigManager config, CooldownManager cooldownManager, WebhookManager webhookManager) {
         this.plugin = plugin;
         this.config = config;
         this.cooldownManager = cooldownManager;
+        this.webhookManager = webhookManager;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -30,19 +38,29 @@ public class ChatListener implements Listener {
         if (!(event.getSender() instanceof ProxiedPlayer)) return;
 
         ProxiedPlayer player = (ProxiedPlayer) event.getSender();
-        if (player.hasPermission(config.getBypassPermission())) return;
+        
+        // Granular Permissions
+        boolean bypassAll = player.hasPermission(config.getBypassAllPermission());
+        if (bypassAll) return;
 
         String fullCommand = event.getMessage();
 
         if (isCommandBlocked(fullCommand)) {
-            // Check Cooldown
-            if (cooldownManager.handleCooldown(player)) {
+            // Check Bypass Block
+            if (player.hasPermission(config.getBypassBlockPermission())) return;
+
+            // Check Cooldown (if not bypassed)
+            boolean bypassCooldown = player.hasPermission(config.getBypassCooldownPermission());
+            if (!bypassCooldown && cooldownManager.handleCooldown(player)) {
                 event.setCancelled(true);
                 return;
             }
 
             event.setCancelled(true);
             plugin.adventure().player(player).sendMessage(config.getBlockMessage());
+            
+            // Webhook
+            webhookManager.sendWebhook(player.getName(), fullCommand);
 
             if (config.isNotificationsEnabled()) {
                 notifyStaff(player, fullCommand);
@@ -55,7 +73,7 @@ public class ChatListener implements Listener {
         if (!(event.getSender() instanceof ProxiedPlayer)) return;
 
         ProxiedPlayer player = (ProxiedPlayer) event.getSender();
-        if (player.hasPermission(config.getBypassPermission())) return;
+        if (player.hasPermission(config.getBypassAllPermission())) return;
 
         String cursor = event.getCursor().toLowerCase();
         if (cursor.startsWith("/")) cursor = cursor.substring(1);
@@ -64,6 +82,7 @@ public class ChatListener implements Listener {
         String base = parts[0];
         
         if (isCommandBlocked(base)) {
+            if (player.hasPermission(config.getBypassBlockPermission())) return;
             event.setCancelled(true);
             event.getSuggestions().clear();
         }
@@ -125,8 +144,27 @@ public class ChatListener implements Listener {
                 .replace("{player}", safePlayer)
                 .replace("{command}", safeCommand);
         
+        Component message = config.parse(msgRaw);
+        
+        // Interactive Actions
+        if (config.isNotificationActionsEnabled()) {
+            List<NotificationAction> actions = config.getNotificationActions();
+            for (NotificationAction action : actions) {
+                String label = action.getLabel().replace("{player}", safePlayer);
+                String hover = action.getHover().replace("{player}", safePlayer);
+                String cmd = action.getCommand().replace("{player}", offender.getName()); // Keep original name for command execution
+                
+                Component actionComp = MiniMessage.miniMessage().deserialize(label)
+                        .hoverEvent(HoverEvent.showText(MiniMessage.miniMessage().deserialize(hover)))
+                        .clickEvent(ClickEvent.runCommand(cmd));
+                
+                message = message.append(actionComp);
+            }
+        }
+
+        final Component finalMessage = message;
         plugin.getProxy().getPlayers().stream()
                 .filter(p -> p.hasPermission(config.getNotifyPermission()))
-                .forEach(p -> plugin.adventure().player(p).sendMessage(config.parse(msgRaw)));
+                .forEach(p -> plugin.adventure().player(p).sendMessage(finalMessage));
     }
 }

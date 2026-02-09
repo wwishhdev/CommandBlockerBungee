@@ -4,7 +4,7 @@
 #| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |
 # \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|____/|_|\___/ \___|_|\_\___|_|
 #
-# CommandBlockerVelocity v2.0.0
+# CommandBlockerVelocity v2.1.0
 # Author: wwishhdev
 
 # =============================================================================
@@ -21,13 +21,17 @@ messages:
 
 # =============================================================================
 # Permissions Configuration
-# Default permissions:
-# - commandblocker.bypass: Allows using blocked commands
+# - commandblocker.bypass: Full bypass (blocks & cooldowns)
+# - commandblocker.bypass.block: Bypass blocked commands check only
+# - commandblocker.bypass.cooldown: Bypass cooldown check only
 # - commandblocker.reload: Allows reloading the plugin
 # - commandblocker.notify: Receives notifications
-# - commandblocker.*: Grants all permissions
 # =============================================================================
-bypass-permission: 'commandblocker.bypass'
+permissions:
+  bypass-all: 'commandblocker.bypass'
+  bypass-block: 'commandblocker.bypass.block'
+  bypass-cooldown: 'commandblocker.bypass.cooldown'
+  notify: 'commandblocker.notify'
 
 # =============================================================================
 # Alias Detection Configuration
@@ -41,7 +45,6 @@ alias-detection:
 # =============================================================================
 # Blocked Commands List
 # Add commands without the '/' prefix
-# Examples: 'op', 'deop', 'reload', etc.
 # =============================================================================
 blocked-commands:
   - 'op'
@@ -55,35 +58,74 @@ blocked-commands:
 # =============================================================================
 # Allowed Commands List
 # Commands in this list will be allowed regardless of other settings
-# Add commands without the '/' prefix
-# Examples: 'help', 'ping', etc.
 # =============================================================================
 allowed-commands-settings:
-  enabled: true  # Enable/disable the allowed commands system
+  enabled: true
   commands:
     - 'help'
     - 'ping'
-    - 'tell'
-    - 'msg'
 
 # =============================================================================
 # Cooldown System Configuration
 # Prevents command spam by limiting attempts
 # =============================================================================
 cooldown:
-  enabled: true             # Enable/disable the cooldown system
-  max-attempts: 3           # Number of attempts before timeout
-  timeout-duration: 300     # Timeout duration in seconds (300 = 5 minutes)
-  reset-after: 600         # Time to reset attempts counter (600 = 10 minutes)
+  enabled: true
+  max-attempts: 3
+  timeout-duration: 300     # Seconds
+  reset-after: 600         # Seconds
   timeout-message: '<red>You have exceeded the attempt limit. Wait <yellow>{time} <red>to try again.'
+
+# =============================================================================
+# Database Configuration (SQLite or MySQL)
+# Used to persist cooldowns across restarts
+# =============================================================================
+database:
+  enabled: false
+  type: "sqlite" # or "mysql"
+  host: "localhost"
+  port: 3306
+  user: "root"
+  password: ""
+  database: "minecraft"
+  table-prefix: "cb_"
 
 # =============================================================================
 # Staff Notification System
 # Alerts staff members when players try to use blocked commands
 # =============================================================================
 notifications:
-  enabled: true                # Enable/disable staff notifications
-  permission: 'commandblocker.notify'  # Permission to receive notifications
-  notify-on-timeout: true      # Notify when a player gets timeout
+  enabled: true
+  notify-on-timeout: true
   command-message: '<yellow>{player} <gray>tried to use blocked command: <red>{command}'
   timeout-message: '<yellow>{player} <gray>has been timed out for exceeding attempts.'
+
+# =============================================================================
+# Interactive Staff Notifications
+# Clickable actions appended to the notification message
+# =============================================================================
+notification-actions:
+  enabled: true
+  # Actions list. You can add as many as you want.
+  # Command placeholders: {player}
+  actions:
+    - label: " <dark_gray>[<red>KICK<dark_gray>]"
+      hover: "<red>Click to Kick {player}"
+      command: "/kick {player} Using blocked commands"
+    - label: " <dark_gray>[<dark_red>BAN<dark_gray>]"
+      hover: "<dark_red>Click to Ban {player}"
+      command: "/ban {player} Blocked Commands"
+    - label: " <dark_gray>[<gold>TEMP-BAN<dark_gray>]"
+      hover: "<gold>Click to Temp-Ban {player}"
+      command: "/tempban {player} 1d Blocked Commands"
+
+# =============================================================================
+# Discord Webhook Integration
+# Sends alerts to a Discord channel
+# =============================================================================
+discord-webhook:
+  enabled: false
+  url: ""
+  username: "CommandBlocker"
+  avatar-url: "https://i.imgur.com/example.png"
+  content: "**{player}** tried to use blocked command: `{command}`"

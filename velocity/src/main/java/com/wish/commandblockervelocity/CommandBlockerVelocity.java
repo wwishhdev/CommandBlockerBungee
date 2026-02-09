@@ -9,10 +9,12 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.wish.commandblockervelocity.commands.ReloadCommand;
+import com.wish.commandblockervelocity.database.DatabaseManager;
 import com.wish.commandblockervelocity.listeners.ChatListener;
 import com.wish.commandblockervelocity.listeners.ConnectionListener;
 import com.wish.commandblockervelocity.managers.ConfigManager;
 import com.wish.commandblockervelocity.managers.CooldownManager;
+import com.wish.commandblockervelocity.managers.WebhookManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bstats.velocity.Metrics;
@@ -23,7 +25,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
-        version = "2.0.0",
+        version = "2.1.0",
         description = "A plugin to block commands in Velocity",
         authors = {"wwishhdev"}
 )
@@ -36,6 +38,8 @@ public class CommandBlockerVelocity {
 
     private ConfigManager configManager;
     private CooldownManager cooldownManager;
+    private DatabaseManager databaseManager;
+    private WebhookManager webhookManager;
 
     @Inject
     public CommandBlockerVelocity(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) {
@@ -56,17 +60,22 @@ public class CommandBlockerVelocity {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                "                CommandBlockerVelocity v2.0.0 \u2764\n" +
+                "                CommandBlockerVelocity v2.1.0 \u2764\n" +
                 "                                                          by wwishhdev\n");
 
         // Managers
         this.configManager = new ConfigManager(this, dataDirectory);
         this.configManager.loadConfiguration();
+        
+        this.databaseManager = new DatabaseManager(this, configManager, dataDirectory);
+        this.databaseManager.init();
+        
+        this.webhookManager = new WebhookManager(this, configManager);
 
-        this.cooldownManager = new CooldownManager(this, configManager);
+        this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
         // Listeners
-        proxy.getEventManager().register(this, new ChatListener(this, configManager, cooldownManager));
+        proxy.getEventManager().register(this, new ChatListener(this, configManager, cooldownManager, webhookManager));
         proxy.getEventManager().register(this, new ConnectionListener(cooldownManager));
 
         // Commands
@@ -95,4 +104,6 @@ public class CommandBlockerVelocity {
     public ConfigManager getConfigManager() {
         return configManager;
     }
+    
+    // Add close logic for velocity if possible (ProxyShutdownEvent) but simple works for now
 }

@@ -3,6 +3,7 @@ package com.wish.commandblockerbungee.managers;
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
+import com.wish.commandblockerbungee.database.DatabaseManager;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,15 +13,31 @@ public class CooldownManager {
 
     private final CommandBlockerBungee plugin;
     private final ConfigManager configManager;
+    private final DatabaseManager databaseManager;
     private final Map<UUID, CommandAttempts> playerAttempts;
 
-    public CooldownManager(CommandBlockerBungee plugin, ConfigManager configManager) {
+    public CooldownManager(CommandBlockerBungee plugin, ConfigManager configManager, DatabaseManager databaseManager) {
         this.plugin = plugin;
         this.configManager = configManager;
+        this.databaseManager = databaseManager;
         this.playerAttempts = new ConcurrentHashMap<>();
         
         // Schedule cleanup task
         plugin.getProxy().getScheduler().schedule(plugin, this::cleanupOldAttempts, 30, 30, TimeUnit.MINUTES);
+    }
+
+    public void loadPlayer(UUID uuid) {
+        if (!configManager.isDatabaseEnabled()) return;
+        
+        databaseManager.loadCooldown(uuid).thenAccept(data -> {
+            if (data != null) {
+                CommandAttempts attempts = new CommandAttempts();
+                attempts.attempts = data.attempts;
+                attempts.lastAttempt = data.lastAttempt;
+                attempts.timeoutUntil = data.timeoutUntil;
+                playerAttempts.put(uuid, attempts);
+            }
+        });
     }
 
     public boolean handleCooldown(ProxiedPlayer player) {
@@ -61,7 +78,10 @@ public class CooldownManager {
     }
 
     public void removeCooldown(UUID uuid) {
-        playerAttempts.remove(uuid);
+        CommandAttempts attempts = playerAttempts.remove(uuid);
+        if (attempts != null && configManager.isDatabaseEnabled()) {
+            databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+        }
     }
 
     private void notifyStaff(String messageRaw) {
