@@ -34,6 +34,11 @@ public class DatabaseManager {
         String type = config.getDatabaseType();
         this.tablePrefix = config.getDatabaseTablePrefix();
 
+        if (!this.tablePrefix.matches("^[a-zA-Z0-9_]+$")) {
+            plugin.getLogger().warn("Invalid table prefix defined in config: '{}'. Using default 'cb_' to prevent SQL issues.", this.tablePrefix);
+            this.tablePrefix = "cb_";
+        }
+
         HikariConfig hikariConfig = new HikariConfig();
 
         if (type.equalsIgnoreCase("mysql")) {
