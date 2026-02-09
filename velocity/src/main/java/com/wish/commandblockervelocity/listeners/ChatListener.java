@@ -1,5 +1,6 @@
 package com.wish.commandblockervelocity.listeners;
 
+import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.command.CommandExecuteEvent;
 import com.velocitypowered.api.event.player.TabCompleteEvent;
@@ -22,7 +23,7 @@ public class ChatListener {
         this.cooldownManager = cooldownManager;
     }
 
-    @Subscribe
+    @Subscribe(order = PostOrder.LATE)
     public void onCommandExecute(CommandExecuteEvent event) {
         if (!(event.getCommandSource() instanceof Player)) return;
 
@@ -47,7 +48,7 @@ public class ChatListener {
         }
     }
 
-    @Subscribe
+    @Subscribe(order = PostOrder.LATE)
     public void onTabComplete(TabCompleteEvent event) {
         Player player = event.getPlayer();
         if (player.hasPermission(config.getBypassPermission())) return;

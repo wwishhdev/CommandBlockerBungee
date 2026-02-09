@@ -8,6 +8,7 @@ import net.md_5.bungee.api.event.ChatEvent;
 import net.md_5.bungee.api.event.TabCompleteEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
+import net.md_5.bungee.event.EventPriority;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public class ChatListener implements Listener {
         this.cooldownManager = cooldownManager;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onChat(ChatEvent event) {
         if (!event.isCommand()) return;
         if (!(event.getSender() instanceof ProxiedPlayer)) return;
@@ -49,7 +50,7 @@ public class ChatListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onTabComplete(TabCompleteEvent event) {
         if (!(event.getSender() instanceof ProxiedPlayer)) return;
 

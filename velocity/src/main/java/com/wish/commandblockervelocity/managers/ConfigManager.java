@@ -16,12 +16,17 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
+import java.util.regex.Pattern;
+
 public class ConfigManager {
 
     private final CommandBlockerVelocity plugin;
     private final Path dataDirectory;
     private ConfigurationNode rootNode;
     private final MiniMessage miniMessage;
+    
+    // Pre-compile the regex pattern for performance
+    private static final Pattern MINIMESSAGE_PATTERN = Pattern.compile(".*<[#a-zA-Z0-9_]+(:.+?)?>.*");
 
     public ConfigManager(CommandBlockerVelocity plugin, Path dataDirectory) {
         this.plugin = plugin;
@@ -179,12 +184,8 @@ public class ConfigManager {
     public Component parse(String text) {
         if (text == null) return Component.empty();
         
-        // Smarter detection: 
-        // If it contains MiniMessage tags (<tag> or <#hex>), use MiniMessage.
-        // Otherwise, fallback to Legacy Ampersand.
-        // This regex looks for: < + (alpha-numeric OR #hex) + (optional parameters) + >
-        // Examples: <red>, <#ff0000>, <gradient:red:blue>
-        if (text.matches(".*<[#a-zA-Z0-9_]+(:.+?)?>.*")) {
+        // Smarter detection using pre-compiled pattern
+        if (MINIMESSAGE_PATTERN.matcher(text).matches()) {
             return miniMessage.deserialize(text);
         }
         
