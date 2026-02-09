@@ -3,9 +3,9 @@ package com.wish.commandblockervelocity.managers;
 import com.velocitypowered.api.proxy.Player;
 import com.wish.commandblockervelocity.CommandBlockerVelocity;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class CooldownManager {
@@ -17,7 +17,7 @@ public class CooldownManager {
     public CooldownManager(CommandBlockerVelocity plugin, ConfigManager configManager) {
         this.plugin = plugin;
         this.configManager = configManager;
-        this.playerAttempts = new HashMap<>();
+        this.playerAttempts = new ConcurrentHashMap<>();
 
         plugin.getProxy().getScheduler().buildTask(plugin, this::cleanupOldAttempts)
                 .repeat(30, TimeUnit.MINUTES)
@@ -57,6 +57,10 @@ public class CooldownManager {
         }
 
         return false;
+    }
+
+    public void removeCooldown(UUID uuid) {
+        playerAttempts.remove(uuid);
     }
 
     private void notifyStaff(String message) {

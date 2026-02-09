@@ -2,6 +2,7 @@ package com.wish.commandblockerbungee;
 
 import com.wish.commandblockerbungee.commands.ReloadCommand;
 import com.wish.commandblockerbungee.listeners.ChatListener;
+import com.wish.commandblockerbungee.listeners.ConnectionListener;
 import com.wish.commandblockerbungee.managers.ConfigManager;
 import com.wish.commandblockerbungee.managers.CooldownManager;
 import net.kyori.adventure.platform.bungeecord.BungeeAudiences;
@@ -41,6 +42,7 @@ public class CommandBlockerBungee extends Plugin {
 
         // Listeners & Commands
         getProxy().getPluginManager().registerListener(this, new ChatListener(this, configManager, cooldownManager));
+        getProxy().getPluginManager().registerListener(this, new ConnectionListener(cooldownManager));
         getProxy().getPluginManager().registerCommand(this, new ReloadCommand(this));
 
         // bStats

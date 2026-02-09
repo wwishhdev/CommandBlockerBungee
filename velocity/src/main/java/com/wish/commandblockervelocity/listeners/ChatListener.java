@@ -2,6 +2,7 @@ package com.wish.commandblockervelocity.listeners;
 
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.command.CommandExecuteEvent;
+import com.velocitypowered.api.event.player.TabCompleteEvent;
 import com.velocitypowered.api.proxy.Player;
 import com.wish.commandblockervelocity.CommandBlockerVelocity;
 import com.wish.commandblockervelocity.managers.ConfigManager;
@@ -43,6 +44,22 @@ public class ChatListener {
             if (config.isNotificationsEnabled()) {
                 notifyStaff(player, fullCommand);
             }
+        }
+    }
+
+    @Subscribe
+    public void onTabComplete(TabCompleteEvent event) {
+        Player player = event.getPlayer();
+        if (player.hasPermission(config.getBypassPermission())) return;
+
+        String partialMessage = event.getPartialMessage();
+        if (partialMessage.startsWith("/")) partialMessage = partialMessage.substring(1);
+
+        String[] parts = partialMessage.split(" ", 2);
+        String baseCommand = parts[0];
+
+        if (isCommandBlocked(baseCommand)) {
+            event.getSuggestions().clear();
         }
     }
 

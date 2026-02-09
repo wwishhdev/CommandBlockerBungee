@@ -10,6 +10,7 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.wish.commandblockervelocity.commands.ReloadCommand;
 import com.wish.commandblockervelocity.listeners.ChatListener;
+import com.wish.commandblockervelocity.listeners.ConnectionListener;
 import com.wish.commandblockervelocity.managers.ConfigManager;
 import com.wish.commandblockervelocity.managers.CooldownManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -66,6 +67,7 @@ public class CommandBlockerVelocity {
 
         // Listeners
         proxy.getEventManager().register(this, new ChatListener(this, configManager, cooldownManager));
+        proxy.getEventManager().register(this, new ConnectionListener(cooldownManager));
 
         // Commands
         CommandManager commandManager = proxy.getCommandManager();

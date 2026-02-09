@@ -3,9 +3,9 @@ package com.wish.commandblockerbungee.managers;
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class CooldownManager {
@@ -17,7 +17,7 @@ public class CooldownManager {
     public CooldownManager(CommandBlockerBungee plugin, ConfigManager configManager) {
         this.plugin = plugin;
         this.configManager = configManager;
-        this.playerAttempts = new HashMap<>();
+        this.playerAttempts = new ConcurrentHashMap<>();
         
         // Schedule cleanup task
         plugin.getProxy().getScheduler().schedule(plugin, this::cleanupOldAttempts, 30, 30, TimeUnit.MINUTES);
@@ -58,6 +58,10 @@ public class CooldownManager {
         }
 
         return false;
+    }
+
+    public void removeCooldown(UUID uuid) {
+        playerAttempts.remove(uuid);
     }
 
     private void notifyStaff(String messageRaw) {

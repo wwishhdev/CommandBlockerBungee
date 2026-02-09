@@ -141,10 +141,17 @@ public class ConfigManager {
     }
 
     public Component parse(String text) {
-        // Support both legacy ampersand and MiniMessage
-        if (text.contains("&")) {
-            return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
+        if (text == null) return Component.empty();
+        
+        // Smarter detection: 
+        // If it contains MiniMessage tags (<tag> or <#hex>), use MiniMessage.
+        // Otherwise, fallback to Legacy Ampersand.
+        // This regex looks for: < + (alpha-numeric OR #hex) + (optional parameters) + >
+        // Examples: <red>, <#ff0000>, <gradient:red:blue>
+        if (text.matches(".*<[#a-zA-Z0-9_]+(:.+?)?>.*")) {
+            return miniMessage.deserialize(text);
         }
-        return miniMessage.deserialize(text);
+        
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
     }
 }

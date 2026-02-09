@@ -54,6 +54,8 @@ public class ConfigManager {
             
         } catch (IOException e) {
             plugin.getLogger().error("Error loading configuration file: " + e.getMessage());
+        } catch (Exception e) {
+            plugin.getLogger().error("Unexpected error loading configuration: " + e.getMessage());
         }
     }
 
@@ -176,11 +178,17 @@ public class ConfigManager {
 
     public Component parse(String text) {
         if (text == null) return Component.empty();
-        // Support both legacy ampersand and MiniMessage
-        if (text.contains("&")) {
-             return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
+        
+        // Smarter detection: 
+        // If it contains MiniMessage tags (<tag> or <#hex>), use MiniMessage.
+        // Otherwise, fallback to Legacy Ampersand.
+        // This regex looks for: < + (alpha-numeric OR #hex) + (optional parameters) + >
+        // Examples: <red>, <#ff0000>, <gradient:red:blue>
+        if (text.matches(".*<[#a-zA-Z0-9_]+(:.+?)?>.*")) {
+            return miniMessage.deserialize(text);
         }
-        return miniMessage.deserialize(text);
+        
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
     }
     
     // Kept for compatibility if needed, but 'parse' is preferred
