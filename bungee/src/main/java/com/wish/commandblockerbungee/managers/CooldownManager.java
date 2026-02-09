@@ -52,7 +52,7 @@ public class CooldownManager {
             plugin.adventure().player(player).sendMessage(configManager.parse(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
 
             if (configManager.isNotifyOnTimeout()) {
-                notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", player.getName()));
+                notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", configManager.escape(player.getName())));
             }
             return true;
         }

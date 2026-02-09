@@ -191,6 +191,11 @@ public class ConfigManager {
         
         return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
     }
+
+    public String escape(String text) {
+        if (text == null) return "";
+        return miniMessage.escapeTags(text);
+    }
     
     // Kept for compatibility if needed, but 'parse' is preferred
     public Component color(String text) {

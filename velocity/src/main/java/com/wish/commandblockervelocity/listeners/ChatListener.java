@@ -114,9 +114,12 @@ public class ChatListener {
     }
 
     private void notifyStaff(Player offender, String command) {
+        String safePlayer = config.escape(offender.getUsername());
+        String safeCommand = config.escape(command);
+
         String msg = config.getNotifyMessageRaw()
-                .replace("{player}", offender.getUsername())
-                .replace("{command}", command);
+                .replace("{player}", safePlayer)
+                .replace("{command}", safeCommand);
         
         plugin.getProxy().getAllPlayers().stream()
                 .filter(p -> p.hasPermission(config.getNotifyPermission()))

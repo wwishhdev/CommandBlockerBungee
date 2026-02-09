@@ -51,7 +51,7 @@ public class CooldownManager {
             player.sendMessage(configManager.color(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
 
             if (configManager.isNotifyOnTimeout()) {
-                notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", player.getUsername()));
+                notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", configManager.escape(player.getUsername())));
             }
             return true;
         }
