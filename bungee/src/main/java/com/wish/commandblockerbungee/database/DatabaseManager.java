@@ -34,10 +34,12 @@ public class DatabaseManager {
         HikariConfig hikariConfig = new HikariConfig();
 
         if (type.equalsIgnoreCase("mysql")) {
+            hikariConfig.setDriverClassName("com.wish.commandblockerbungee.libs.mysql.cj.jdbc.Driver");
             hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?useSSL=false&autoReconnect=true");
             hikariConfig.setUsername(config.getDatabaseUser());
             hikariConfig.setPassword(config.getDatabasePassword());
         } else {
+            hikariConfig.setDriverClassName("com.wish.commandblockerbungee.libs.sqlite.JDBC");
             File file = new File(plugin.getDataFolder(), "database.db");
             hikariConfig.setJdbcUrl("jdbc:sqlite:" + file.getAbsolutePath());
         }
