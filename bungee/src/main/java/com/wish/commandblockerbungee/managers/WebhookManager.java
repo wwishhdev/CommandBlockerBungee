@@ -37,7 +37,7 @@ public class WebhookManager {
                 String jsonUsername = escapeJson(config.getWebhookUsername());
                 String jsonAvatar = escapeJson(config.getWebhookAvatarUrl());
 
-                String jsonPayload = String.format("{"username": "%s", "avatar_url": "%s", "content": "%s"}",
+                String jsonPayload = String.format("{\"username\": \"%s\", \"avatar_url\": \"%s\", \"content\": \"%s\"}",
                         jsonUsername, jsonAvatar, jsonContent);
 
                 HttpRequest request = HttpRequest.newBuilder()
@@ -56,14 +56,12 @@ public class WebhookManager {
 
     private String escapeJson(String text) {
         if (text == null) return "";
-        return text.replace("", "")
-                .replace(""", """)
-                .replace("\b", "\b")
-                .replace("\f", "\f")
-                .replace("
-", "
-")
-                .replace("", "")
-                .replace("	", "	");
+        return text.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }
