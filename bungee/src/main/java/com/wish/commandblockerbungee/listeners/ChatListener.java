@@ -91,10 +91,16 @@ public class ChatListener implements Listener {
     private boolean isCommandBlocked(String command) {
         if (command == null || command.trim().isEmpty()) return false;
 
-        String cleanCommand = command.toLowerCase();
-        if (cleanCommand.startsWith("/")) cleanCommand = cleanCommand.substring(1);
+        String cleanCommand = command.trim().toLowerCase();
+        if (cleanCommand.startsWith("/")) {
+            cleanCommand = cleanCommand.substring(1);
+        }
 
-        String[] parts = cleanCommand.split(" ", 2);
+        // FIX: Limpiamos espacios sobrantes despues de la barra y usamos regex para el split
+        cleanCommand = cleanCommand.trim();
+        String[] parts = cleanCommand.split("\\s+", 2);
+        
+        if (parts.length == 0) return false;
         String baseCommand = parts[0];
 
         if (baseCommand.isEmpty()) return false;
