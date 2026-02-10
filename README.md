@@ -13,9 +13,15 @@ An advanced and efficient plugin to block commands across your entire network, s
   - Prevent command spamming with a configurable cooldown system.
   - Timeout players who exceed maximum attempts.
   - Auto-reset cooldowns after a set period.
-- **Staff Notifications**:
-  - Alert specific permission groups when players try to use blocked commands.
-  - Notifications for cooldown violations.
+- **Database Support**:
+  - **SQLite**: No setup required, works out of the box.
+  - **MySQL**: High-performance support for networks that need data persistence across restarts.
+- **Discord Integration**:
+  - Send real-time alerts to a Discord channel via Webhooks when players try to use blocked commands.
+  - Highly customizable messages and embed styles.
+- **Interactive Staff Notifications**:
+  - Alerts are not just text; they are clickable!
+  - Staff can **Kick**, **Ban**, or **Temp-Ban** offenders directly from the chat notification.
 - **Highly Configurable**:
   - Custom messages with **MiniMessage** support (gradients, rgb, etc.) and legacy '&' color codes.
   - Toggles for almost every feature.
@@ -34,7 +40,7 @@ An advanced and efficient plugin to block commands across your entire network, s
 
 ## ⚙️ Configuration
 
-The `config.yml` is generated automatically. Here is a brief overview:
+The `config.yml` is generated automatically. Here is a brief overview of the new capabilities:
 
 ```yaml
 blocked-commands:
@@ -42,20 +48,27 @@ blocked-commands:
   - "pl"
   - "plugins"
 
-alias-detection:
-  enabled: true
-  block-plugin-prefix: true  # Blocks minecraft:op, etc.
-  block-help-subcommand: true # Blocks /op help
+# ... (Basic blocking settings) ...
 
-cooldown:
+# NEW: Database Support
+database:
   enabled: true
-  max-attempts: 3
-  timeout-duration: 300 # Seconds
-  reset-after: 600      # Seconds
+  type: "sqlite" # or "mysql"
+  # Connection details for MySQL...
 
-notifications:
+# NEW: Discord Integration
+discord-webhook:
   enabled: true
-  permission: "commandblocker.notify"
+  url: "YOUR_WEBHOOK_URL"
+  username: "CommandBlocker"
+  content: "**{player}** tried to use blocked command: `{command}`"
+
+# NEW: Interactive Actions in Chat
+notification-actions:
+  enabled: true
+  actions:
+    - label: " [KICK]"
+      command: "/kick {player} Blocked Commands"
 ```
 
 ## 🔒 Permissions
