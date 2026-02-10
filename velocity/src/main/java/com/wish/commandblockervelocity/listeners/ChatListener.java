@@ -49,13 +49,17 @@ public class ChatListener {
 
              // Check Cooldown
             boolean bypassCooldown = player.hasPermission(config.getBypassCooldownPermission());
-            if (!bypassCooldown && cooldownManager.handleCooldown(player)) {
-                event.setResult(CommandExecuteEvent.CommandResult.denied());
-                return;
+            boolean onCooldown = false;
+            
+            if (!bypassCooldown) {
+                onCooldown = cooldownManager.handleCooldown(player);
             }
 
             event.setResult(CommandExecuteEvent.CommandResult.denied());
-            player.sendMessage(config.getBlockMessage());
+            
+            if (!onCooldown) {
+                player.sendMessage(config.getBlockMessage());
+            }
             
             // Webhook
             webhookManager.sendWebhook(player.getUsername(), fullCommand);
@@ -106,31 +110,29 @@ public class ChatListener {
             for (String allowed : config.getAllowedCommands()) {
                 if (allowed == null) continue;
                 String allowedLower = allowed.toLowerCase();
-                if (baseCommand.equals(allowedLower)) return false;
-                if (cleanCommand.startsWith(allowedLower + " ")) return false;
+                if (baseCommand.equals(allowedLower) || cleanCommand.startsWith(allowedLower + " ")) return false;
             }
         }
 
         // 2. Blocked Commands Check
         List<String> blockedCommands = config.getBlockedCommands();
-        if (!config.isAliasDetectionEnabled()) {
-            return blockedCommands.contains(baseCommand);
-        }
 
         for (String blockedCmd : blockedCommands) {
             if (blockedCmd == null) continue;
-            blockedCmd = blockedCmd.toLowerCase();
+            String blockedLower = blockedCmd.toLowerCase();
 
             // Exact match
-            if (baseCommand.equals(blockedCmd)) return true;
+            if (baseCommand.equals(blockedLower)) return true;
 
             // Plugin prefix (minecraft:op)
-            if (config.isBlockPluginPrefix() && baseCommand.startsWith(blockedCmd + ":")) return true;
-            if (config.isBlockPluginPrefix() && baseCommand.contains(":" + blockedCmd)) return true; 
+            if (config.isBlockPluginPrefix()) {
+                 if (baseCommand.endsWith(":" + blockedLower)) return true; 
+                 if (baseCommand.equals(blockedLower + ":")) return true;
+            }
 
             // Alias: Help subcommand (op help)
             if (config.isBlockHelpSubcommand()) {
-                 if (cleanCommand.equals(blockedCmd + " help") || cleanCommand.startsWith(blockedCmd + " help ")) {
+                 if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) {
                      return true;
                  }
             }

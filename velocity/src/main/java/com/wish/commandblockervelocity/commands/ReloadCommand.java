@@ -22,6 +22,7 @@ public class ReloadCommand implements SimpleCommand {
         if (source.hasPermission("commandblocker.reload")) {
             try {
                 config.loadConfiguration();
+                plugin.getDatabaseManager().reload();
                 source.sendMessage(config.getReloadSuccessMessage());
                 
                 String playerName = (source instanceof Player) ? ((Player) source).getUsername() : "Console";

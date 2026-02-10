@@ -31,11 +31,30 @@ public class CooldownManager {
         
         databaseManager.loadCooldown(uuid).thenAccept(data -> {
             if (data != null) {
-                CommandAttempts attempts = new CommandAttempts();
-                attempts.attempts = data.attempts;
-                attempts.lastAttempt = data.lastAttempt;
-                attempts.timeoutUntil = data.timeoutUntil;
-                playerAttempts.put(uuid, attempts);
+                playerAttempts.compute(uuid, (key, current) -> {
+                    if (current == null) {
+                        // No local attempts yet, just load db
+                        CommandAttempts attempts = new CommandAttempts();
+                        attempts.attempts = data.attempts;
+                        attempts.lastAttempt = data.lastAttempt;
+                        attempts.timeoutUntil = data.timeoutUntil;
+                        return attempts;
+                    } else {
+                        // Race condition hit: Player chattered before DB loaded.
+                        // Strategy: Keep the stricter of the two or merge.
+                        // Here we take DB timeout if it's longer, and sum attempts? 
+                        // Safer to just adopt DB state if it's a timeout, otherwise keep local activity?
+                        // Let's adopt DB state BUT if local has more recent activity, update lastAttempt.
+                        
+                        // Simple merge: If DB says timed out, enforce it.
+                        if (System.currentTimeMillis() < data.timeoutUntil) {
+                            current.timeoutUntil = data.timeoutUntil;
+                        }
+                        // Add DB attempts to current? Or just max?
+                        current.attempts = Math.max(current.attempts, data.attempts);
+                        return current;
+                    }
+                });
             }
         });
     }
@@ -68,6 +87,7 @@ public class CooldownManager {
             
             plugin.adventure().player(player).sendMessage(configManager.parse(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
 
+            // Notify staff about the timeout event specifically
             if (configManager.isNotifyOnTimeout()) {
                 notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", configManager.escape(player.getName())));
             }

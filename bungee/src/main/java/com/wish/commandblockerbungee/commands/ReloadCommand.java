@@ -22,6 +22,7 @@ public class ReloadCommand extends Command {
         if (sender.hasPermission("commandblocker.reload")) {
             try {
                 config.loadConfiguration();
+                plugin.getDatabaseManager().reload();
                 
                 if (sender instanceof ProxiedPlayer) {
                     plugin.adventure().player((ProxiedPlayer) sender).sendMessage(config.getReloadSuccessMessage());

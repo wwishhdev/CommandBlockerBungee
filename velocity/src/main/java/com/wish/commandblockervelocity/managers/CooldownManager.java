@@ -32,11 +32,22 @@ public class CooldownManager {
 
         databaseManager.loadCooldown(uuid).thenAccept(data -> {
             if (data != null) {
-                CommandAttempts attempts = new CommandAttempts();
-                attempts.attempts = data.attempts;
-                attempts.lastAttempt = data.lastAttempt;
-                attempts.timeoutUntil = data.timeoutUntil;
-                playerAttempts.put(uuid, attempts);
+                playerAttempts.compute(uuid, (key, current) -> {
+                    if (current == null) {
+                         CommandAttempts attempts = new CommandAttempts();
+                        attempts.attempts = data.attempts;
+                        attempts.lastAttempt = data.lastAttempt;
+                        attempts.timeoutUntil = data.timeoutUntil;
+                        return attempts;
+                    } else {
+                        // Merge
+                        if (System.currentTimeMillis() < data.timeoutUntil) {
+                            current.timeoutUntil = data.timeoutUntil;
+                        }
+                        current.attempts = Math.max(current.attempts, data.attempts);
+                        return current;
+                    }
+                });
             }
         });
     }

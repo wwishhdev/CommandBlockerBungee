@@ -51,17 +51,25 @@ public class ChatListener implements Listener {
 
             // Check Cooldown (if not bypassed)
             boolean bypassCooldown = player.hasPermission(config.getBypassCooldownPermission());
-            if (!bypassCooldown && cooldownManager.handleCooldown(player)) {
-                event.setCancelled(true);
-                return;
+            boolean onCooldown = false;
+            
+            if (!bypassCooldown) {
+                // handleCooldown returns true if they are currently timed out OR just got timed out
+                onCooldown = cooldownManager.handleCooldown(player);
             }
 
             event.setCancelled(true);
-            plugin.adventure().player(player).sendMessage(config.getBlockMessage());
             
-            // Webhook
+            // Only send block message if NOT on cooldown (cooldown manager sends its own message)
+            // OR if you want both messages. Usually, if timed out, you get the timeout message.
+            if (!onCooldown) {
+                plugin.adventure().player(player).sendMessage(config.getBlockMessage());
+            }
+            
+            // Webhook - Always send (Managers queues it)
             webhookManager.sendWebhook(player.getName(), fullCommand);
 
+            // Notify Staff - Always notify (or filtered by settings)
             if (config.isNotificationsEnabled()) {
                 notifyStaff(player, fullCommand);
             }
@@ -78,6 +86,7 @@ public class ChatListener implements Listener {
         String cursor = event.getCursor().toLowerCase();
         if (cursor.startsWith("/")) cursor = cursor.substring(1);
         
+        // Fix: Properly handle spacing in tab complete
         String[] parts = cursor.split(" ", 2);
         String base = parts[0];
         
@@ -96,10 +105,7 @@ public class ChatListener implements Listener {
             cleanCommand = cleanCommand.substring(1);
         }
 
-        // FIX: Limpiamos espacios sobrantes despues de la barra y usamos regex para el split
-        cleanCommand = cleanCommand.trim();
         String[] parts = cleanCommand.split("\\s+", 2);
-        
         if (parts.length == 0) return false;
         String baseCommand = parts[0];
 
@@ -110,31 +116,30 @@ public class ChatListener implements Listener {
             for (String allowed : config.getAllowedCommands()) {
                 if (allowed == null) continue;
                 String allowedLower = allowed.toLowerCase();
-                if (baseCommand.equals(allowedLower)) return false;
-                if (cleanCommand.startsWith(allowedLower + " ")) return false;
+                // Exact match or sub-command
+                if (baseCommand.equals(allowedLower) || cleanCommand.startsWith(allowedLower + " ")) return false;
             }
         }
 
         // 2. Blocked Commands Check
         List<String> blockedCommands = config.getBlockedCommands();
-        if (!config.isAliasDetectionEnabled()) {
-            return blockedCommands.contains(baseCommand);
-        }
-
+        
         for (String blockedCmd : blockedCommands) {
             if (blockedCmd == null) continue;
-            blockedCmd = blockedCmd.toLowerCase();
+            String blockedLower = blockedCmd.toLowerCase();
 
-            // Exact match
-            if (baseCommand.equals(blockedCmd)) return true;
+            // Exact match: "op" == "op"
+            if (baseCommand.equals(blockedLower)) return true;
 
-            // Plugin prefix (minecraft:op)
-            if (config.isBlockPluginPrefix() && baseCommand.startsWith(blockedCmd + ":")) return true;
-            if (config.isBlockPluginPrefix() && baseCommand.contains(":" + blockedCmd)) return true; // Safety catch for other prefixes
+            // Plugin prefix: "minecraft:op" == "minecraft:op"
+            if (config.isBlockPluginPrefix()) {
+                 if (baseCommand.endsWith(":" + blockedLower)) return true; // checks "minecraft:op" or "essential:op"
+                 if (baseCommand.equals(blockedLower + ":")) return true; // edge case
+            }
 
             // Alias: Help subcommand (op help)
             if (config.isBlockHelpSubcommand()) {
-                 if (cleanCommand.equals(blockedCmd + " help") || cleanCommand.startsWith(blockedCmd + " help ")) {
+                 if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) {
                      return true;
                  }
             }

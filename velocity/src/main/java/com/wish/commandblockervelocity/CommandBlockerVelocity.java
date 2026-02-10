@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
@@ -92,6 +94,17 @@ public class CommandBlockerVelocity {
 
         logger.info("CommandBlockerVelocity has been enabled successfully!");
     }
+
+    @Subscribe
+    public void onProxyShutdown(ProxyShutdownEvent event) {
+        if (cooldownManager != null) {
+            cooldownManager.clear();
+        }
+        if (databaseManager != null) {
+            databaseManager.close();
+        }
+        logger.info("CommandBlockerVelocity has been disabled!");
+    }
     
     public ProxyServer getProxy() {
         return proxy;
@@ -103,6 +116,10 @@ public class CommandBlockerVelocity {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+    
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
     
     // Add close logic for velocity if possible (ProxyShutdownEvent) but simple works for now

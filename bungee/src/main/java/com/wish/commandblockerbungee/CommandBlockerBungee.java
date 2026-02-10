@@ -79,6 +79,10 @@ public class CommandBlockerBungee extends Plugin {
         return configManager;
     }
 
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
+    }
+
     public BungeeAudiences adventure() {
         if (this.adventure == null) {
             throw new IllegalStateException("Cannot retrieve audience provider while plugin is not enabled");

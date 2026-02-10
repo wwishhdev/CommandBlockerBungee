@@ -28,6 +28,11 @@ public class DatabaseManager {
     public void init() {
         if (!config.isDatabaseEnabled()) return;
 
+        // Close existing if present (Reload safety)
+        if (this.dataSource != null && !this.dataSource.isClosed()) {
+            this.dataSource.close();
+        }
+
         String type = config.getDatabaseType();
         this.tablePrefix = config.getDatabaseTablePrefix();
 
@@ -108,6 +113,11 @@ public class DatabaseManager {
             }
             return null;
         });
+    }
+
+    public void reload() {
+        close();
+        init();
     }
 
     public void close() {

@@ -8,11 +8,16 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+
 public class WebhookManager {
 
     private final CommandBlockerVelocity plugin;
     private final ConfigManager config;
     private final HttpClient httpClient;
+    private final Queue<WebhookRequest> queue = new ConcurrentLinkedQueue<>();
 
     public WebhookManager(CommandBlockerVelocity plugin, ConfigManager config) {
         this.plugin = plugin;
@@ -21,18 +26,34 @@ public class WebhookManager {
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
+        
+        plugin.getProxy().getScheduler().buildTask(plugin, this::processQueue)
+                .repeat(1, TimeUnit.SECONDS)
+                .schedule();
     }
 
     public void sendWebhook(String playerName, String command) {
         if (!config.isWebhookEnabled() || config.getWebhookUrl().isEmpty()) return;
+        queue.add(new WebhookRequest(playerName, command));
+    }
 
+    private void processQueue() {
+        if (queue.isEmpty()) return;
+
+        for (int i = 0; i < 2; i++) {
+            WebhookRequest req = queue.poll();
+            if (req == null) break;
+            send(req.playerName, req.command);
+        }
+    }
+
+    private void send(String playerName, String command) {
         CompletableFuture.runAsync(() -> {
             try {
                 String content = config.getWebhookContent()
                         .replace("{player}", playerName)
                         .replace("{command}", command);
                 
-                // Escape JSON strings manually to avoid dependency
                 String jsonContent = escapeJson(content);
                 String jsonUsername = escapeJson(config.getWebhookUsername());
                 String jsonAvatar = escapeJson(config.getWebhookAvatarUrl());
@@ -52,6 +73,16 @@ public class WebhookManager {
                 plugin.getLogger().warn("Failed to send Discord webhook: " + e.getMessage());
             }
         });
+    }
+    
+    private static class WebhookRequest {
+        final String playerName;
+        final String command;
+
+        WebhookRequest(String playerName, String command) {
+            this.playerName = playerName;
+            this.command = command;
+        }
     }
 
     private String escapeJson(String text) {
