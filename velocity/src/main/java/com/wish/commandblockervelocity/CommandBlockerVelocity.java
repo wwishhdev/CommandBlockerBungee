@@ -25,7 +25,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
-        version = "2.1.0",
+        version = "2.1.1",
         description = "A plugin to block commands in Velocity",
         authors = {"wwishhdev"}
 )
@@ -60,7 +60,7 @@ public class CommandBlockerVelocity {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                "                CommandBlockerVelocity v2.1.0 \u2764\n" +
+                "                CommandBlockerVelocity v2.1.1 \u2764\n" +
                 "                                                          by wwishhdev\n");
 
         // Managers
