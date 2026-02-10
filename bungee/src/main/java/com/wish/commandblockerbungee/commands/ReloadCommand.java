@@ -27,10 +27,6 @@ public class ReloadCommand extends Command {
                 if (sender instanceof ProxiedPlayer) {
                     plugin.adventure().player((ProxiedPlayer) sender).sendMessage(config.getReloadSuccessMessage());
                 } else {
-                    sender.sendMessage(net.md_5.bungee.api.chat.TextComponent.fromLegacyText(
-                        config.getReloadSuccessMessage().toString() // Basic fallback for console if needed or use adventure console
-                    ));
-                    // Actually, Adventure supports console too
                     plugin.adventure().sender(sender).sendMessage(config.getReloadSuccessMessage());
                 }
                 

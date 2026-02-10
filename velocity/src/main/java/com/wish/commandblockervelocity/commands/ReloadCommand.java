@@ -26,7 +26,9 @@ public class ReloadCommand implements SimpleCommand {
                 source.sendMessage(config.getReloadSuccessMessage());
                 
                 String playerName = (source instanceof Player) ? ((Player) source).getUsername() : "Console";
-                plugin.getLogger().info(config.getConsoleReloadMessageRaw().replace("{player}", playerName));
+                if (source instanceof Player) { // Only log to console if player reloaded, otherwise it's duplicate
+                     plugin.getLogger().info(config.getConsoleReloadMessageRaw().replace("{player}", playerName));
+                }
             } catch (Exception e) {
                 source.sendMessage(config.color(config.getReloadErrorMessageRaw().replace("{error}", e.getMessage())));
                 plugin.getLogger().error("Error reloading configuration: " + e.getMessage());

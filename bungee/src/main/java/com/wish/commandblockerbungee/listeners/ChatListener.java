@@ -133,8 +133,13 @@ public class ChatListener implements Listener {
 
             // Plugin prefix: "minecraft:op" == "minecraft:op"
             if (config.isBlockPluginPrefix()) {
-                 if (baseCommand.endsWith(":" + blockedLower)) return true; // checks "minecraft:op" or "essential:op"
-                 if (baseCommand.equals(blockedLower + ":")) return true; // edge case
+                 // Check if command is exactly "plugin:command" where command is blocked
+                 if (baseCommand.contains(":")) {
+                     String[] cmdParts = baseCommand.split(":", 2);
+                     if (cmdParts.length > 1 && cmdParts[1].equals(blockedLower)) {
+                         return true;
+                     }
+                 }
             }
 
             // Alias: Help subcommand (op help)
@@ -163,7 +168,9 @@ public class ChatListener implements Listener {
             for (NotificationAction action : actions) {
                 String label = action.getLabel().replace("{player}", safePlayer);
                 String hover = action.getHover().replace("{player}", safePlayer);
-                String cmd = action.getCommand().replace("{player}", offender.getName()); // Keep original name for command execution
+                // Sanitize username for command execution to prevent injection
+                String sanitizedPlayer = offender.getName().replaceAll("[^a-zA-Z0-9_]", "");
+                String cmd = action.getCommand().replace("{player}", sanitizedPlayer); 
                 
                 Component actionComp = MiniMessage.miniMessage().deserialize(label)
                         .hoverEvent(HoverEvent.showText(MiniMessage.miniMessage().deserialize(hover)))

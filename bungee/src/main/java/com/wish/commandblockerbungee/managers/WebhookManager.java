@@ -18,6 +18,7 @@ public class WebhookManager {
     private final ConfigManager config;
     private final HttpClient httpClient;
     private final Queue<WebhookRequest> queue = new ConcurrentLinkedQueue<>();
+    private static final int MAX_QUEUE_SIZE = 500;
 
     public WebhookManager(CommandBlockerBungee plugin, ConfigManager config) {
         this.plugin = plugin;
@@ -33,6 +34,11 @@ public class WebhookManager {
 
     public void sendWebhook(String playerName, String command) {
         if (!config.isWebhookEnabled() || config.getWebhookUrl().isEmpty()) return;
+        
+        if (queue.size() >= MAX_QUEUE_SIZE) {
+            // Drop request to prevent DoS/OOM
+            return;
+        }
         queue.add(new WebhookRequest(playerName, command));
     }
 

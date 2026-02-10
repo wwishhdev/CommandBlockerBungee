@@ -73,25 +73,26 @@ public class CooldownManager {
         }
 
         // Check reset
-        long timeSinceLastAttempt = (System.currentTimeMillis() - attempts.lastAttempt) / 1000;
-        if (timeSinceLastAttempt > configManager.getResetAfter()) {
-            attempts.attempts = 0;
-        }
-
-        attempts.attempts++;
-        attempts.lastAttempt = System.currentTimeMillis();
-
-        if (attempts.attempts >= configManager.getMaxAttempts()) {
-            attempts.timeoutUntil = System.currentTimeMillis() + (configManager.getTimeoutDuration() * 1000L);
-            String timeLeft = String.valueOf(configManager.getTimeoutDuration());
-            
-            plugin.adventure().player(player).sendMessage(configManager.parse(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
-
-            // Notify staff about the timeout event specifically
-            if (configManager.isNotifyOnTimeout()) {
-                notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", configManager.escape(player.getName())));
+        synchronized(attempts) {
+            long timeSinceLastAttempt = (System.currentTimeMillis() - attempts.lastAttempt) / 1000;
+            if (timeSinceLastAttempt > configManager.getResetAfter()) {
+                attempts.resetAttempts();
             }
-            return true;
+
+            attempts.incrementAttempts();
+
+            if (attempts.attempts >= configManager.getMaxAttempts()) {
+                attempts.setTimeout(configManager.getTimeoutDuration());
+                String timeLeft = String.valueOf(configManager.getTimeoutDuration());
+                
+                plugin.adventure().player(player).sendMessage(configManager.parse(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
+
+                // Notify staff about the timeout event specifically
+                if (configManager.isNotifyOnTimeout()) {
+                    notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", configManager.escape(player.getName())));
+                }
+                return true;
+            }
         }
 
         return false;
@@ -128,12 +129,25 @@ public class CooldownManager {
         long lastAttempt = System.currentTimeMillis();
         long timeoutUntil = 0;
 
-        boolean isTimedOut() {
+        synchronized boolean isTimedOut() {
             return System.currentTimeMillis() < timeoutUntil;
         }
 
-        long getRemainingTimeout() {
+        synchronized long getRemainingTimeout() {
             return Math.max(0, timeoutUntil - System.currentTimeMillis()) / 1000;
+        }
+        
+        synchronized void incrementAttempts() {
+            this.attempts++;
+            this.lastAttempt = System.currentTimeMillis();
+        }
+        
+        synchronized void resetAttempts() {
+            this.attempts = 0;
+        }
+        
+        synchronized void setTimeout(long durationSeconds) {
+            this.timeoutUntil = System.currentTimeMillis() + (durationSeconds * 1000L);
         }
     }
 }

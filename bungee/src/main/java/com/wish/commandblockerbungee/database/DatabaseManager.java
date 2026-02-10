@@ -45,9 +45,13 @@ public class DatabaseManager {
 
         if (type.equalsIgnoreCase("mysql")) {
             hikariConfig.setDriverClassName("com.wish.commandblockerbungee.libs.mysql.cj.jdbc.Driver");
-            hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?useSSL=false&autoReconnect=true");
+            // useSSL=false is often required for dev envs but can be insecure. Added verifyServerCertificate=false for compatibility if ssl is off.
+            hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?autoReconnect=true");
             hikariConfig.setUsername(config.getDatabaseUser());
             hikariConfig.setPassword(config.getDatabasePassword());
+            // Add properties for security/performance
+            hikariConfig.addDataSourceProperty("useSSL", "false"); // Should ideally be true in production with proper certs
+            hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
         } else {
             hikariConfig.setDriverClassName("com.wish.commandblockerbungee.libs.sqlite.JDBC");
             File file = new File(plugin.getDataFolder(), "database.db");

@@ -47,9 +47,11 @@ public class DatabaseManager {
 
         if (type.equalsIgnoreCase("mysql")) {
             hikariConfig.setDriverClassName("com.wish.commandblockervelocity.libs.mysql.cj.jdbc.Driver");
-            hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?useSSL=false&autoReconnect=true");
+            hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?autoReconnect=true");
             hikariConfig.setUsername(config.getDatabaseUser());
             hikariConfig.setPassword(config.getDatabasePassword());
+            hikariConfig.addDataSourceProperty("useSSL", "false"); // Keeping false for compatibility but extracting from URL string
+            hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
         } else {
             hikariConfig.setDriverClassName("com.wish.commandblockervelocity.libs.sqlite.JDBC");
             Path file = dataDirectory.resolve("database.db");
