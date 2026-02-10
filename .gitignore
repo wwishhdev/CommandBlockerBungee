@@ -43,3 +43,4 @@ build/
 build.bat
 velocity/target/
 bungee/target/
+.gemini_security/

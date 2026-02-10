@@ -23,12 +23,12 @@ An advanced and efficient plugin to block commands across your entire network, s
 ## 📥 Installation
 
 ### BungeeCord
-1. Download `CommandBlockerBungee-2.0.0.jar`.
+1. Download `CommandBlockerBungee-2.1.0.jar`.
 2. Place the jar file in your `plugins` folder.
 3. Restart your proxy.
 
 ### Velocity
-1. Download `CommandBlockerVelocity-2.0.0.jar`.
+1. Download `CommandBlockerVelocity-2.1.0.jar`.
 2. Place the jar file in your `plugins` folder.
 3. Restart your proxy.
 
@@ -61,7 +61,7 @@ notifications:
 ## 🔒 Permissions
 
 | Permission | Description | Default |
-|dir|---|---|
+|---|---|---|
 | `commandblocker.admin` | Grants all permissions | OP |
 | `commandblocker.bypass` | Bypass command blocking | OP |
 | `commandblocker.reload` | Access to `/cbreload` | OP |
