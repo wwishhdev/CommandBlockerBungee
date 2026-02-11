@@ -89,6 +89,11 @@ database:
   password: ""
   database: "minecraft"
   table-prefix: "cb_"
+  # Advanced Settings
+  use-ssl: false            # Set to true if your database supports/requires SSL
+  auto-reconnect: true      # Automatically try to reconnect if connection is lost
+  max-pool-size: 10         # Maximum number of connections in the pool
+  connection-timeout: 30000 # Milliseconds to wait for a connection
 
 # =============================================================================
 # Staff Notification System

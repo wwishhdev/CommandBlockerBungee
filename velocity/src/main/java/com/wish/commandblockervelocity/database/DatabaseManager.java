@@ -47,11 +47,12 @@ public class DatabaseManager {
 
         if (type.equalsIgnoreCase("mysql")) {
             hikariConfig.setDriverClassName("com.wish.commandblockervelocity.libs.mysql.cj.jdbc.Driver");
-            hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?autoReconnect=true");
+            hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?autoReconnect=" + config.isDatabaseAutoReconnect());
             hikariConfig.setUsername(config.getDatabaseUser());
             hikariConfig.setPassword(config.getDatabasePassword());
             
             hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
+            hikariConfig.addDataSourceProperty("useSSL", String.valueOf(config.isDatabaseUseSSL()));
         } else {
             hikariConfig.setDriverClassName("com.wish.commandblockervelocity.libs.sqlite.JDBC");
             Path file = dataDirectory.resolve("database.db");
@@ -59,8 +60,8 @@ public class DatabaseManager {
         }
 
         hikariConfig.setPoolName("CommandBlockerPool");
-        hikariConfig.setMaximumPoolSize(10);
-        hikariConfig.setConnectionTimeout(30000);
+        hikariConfig.setMaximumPoolSize(config.getDatabaseMaxPoolSize());
+        hikariConfig.setConnectionTimeout(config.getDatabaseConnectionTimeout());
 
         this.dataSource = new HikariDataSource(hikariConfig);
         createTable();

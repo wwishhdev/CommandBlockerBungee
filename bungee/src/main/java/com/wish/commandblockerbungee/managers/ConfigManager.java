@@ -198,6 +198,22 @@ public class ConfigManager {
         return configuration.getString("database.table-prefix", "cb_");
     }
 
+    public boolean isDatabaseUseSSL() {
+        return configuration.getBoolean("database.use-ssl", false);
+    }
+
+    public boolean isDatabaseAutoReconnect() {
+        return configuration.getBoolean("database.auto-reconnect", true);
+    }
+    
+    public int getDatabaseMaxPoolSize() {
+        return configuration.getInt("database.max-pool-size", 10);
+    }
+    
+    public int getDatabaseConnectionTimeout() {
+        return configuration.getInt("database.connection-timeout", 30000);
+    }
+
     // ========================================================================
     // Discord Webhook
     // ========================================================================
