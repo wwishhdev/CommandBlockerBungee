@@ -104,6 +104,9 @@ public class ChatListener implements Listener {
         if (cleanCommand.startsWith("/")) {
             cleanCommand = cleanCommand.substring(1);
         }
+        
+        // Fix: Trim again to handle "/ op" -> " op" -> "op"
+        cleanCommand = cleanCommand.trim();
 
         String[] parts = cleanCommand.split("\\s+", 2);
         if (parts.length == 0) return false;

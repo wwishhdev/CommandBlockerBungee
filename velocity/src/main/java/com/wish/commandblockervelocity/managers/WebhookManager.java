@@ -49,7 +49,10 @@ public class WebhookManager {
         for (int i = 0; i < 2; i++) {
             WebhookRequest req = queue.poll();
             if (req == null) break;
-            send(req.playerName, req.command);
+            
+            // Sanitize markdown in player name
+            String safePlayer = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
+            send(safePlayer, req.command);
         }
     }
 

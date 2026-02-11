@@ -50,7 +50,7 @@ public class DatabaseManager {
             hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?autoReconnect=true");
             hikariConfig.setUsername(config.getDatabaseUser());
             hikariConfig.setPassword(config.getDatabasePassword());
-            hikariConfig.addDataSourceProperty("useSSL", "false"); // Keeping false for compatibility but extracting from URL string
+            
             hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
         } else {
             hikariConfig.setDriverClassName("com.wish.commandblockervelocity.libs.sqlite.JDBC");
