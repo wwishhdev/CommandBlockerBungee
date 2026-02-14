@@ -73,8 +73,8 @@ public class WebhookManager {
                 String jsonUsername = escapeJson(config.getWebhookUsername());
                 String jsonAvatar = escapeJson(config.getWebhookAvatarUrl());
 
-                String jsonPayload = String.format("{\"username\": \"%s\", \"avatar_url\": \"%s\", \"content\": \"%s\"}",
-                        jsonUsername, jsonAvatar, jsonContent);
+                // Use concatenation instead of String.format to avoid issues with % characters
+                String jsonPayload = "{\"username\": \"" + jsonUsername + "\", \"avatar_url\": \"" + jsonAvatar + "\", \"content\": \"" + jsonContent + "\"}";
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(config.getWebhookUrl()))
