@@ -12,6 +12,10 @@ import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.plugin.Plugin;
 import org.bstats.bungeecord.Metrics;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 public class CommandBlockerBungee extends Plugin {
 
     private ConfigManager configManager;
@@ -19,9 +23,13 @@ public class CommandBlockerBungee extends Plugin {
     private DatabaseManager databaseManager;
     private WebhookManager webhookManager;
     private BungeeAudiences adventure;
+    private ExecutorService executorService;
 
     @Override
     public void onEnable() {
+        // Initialize Thread Pool
+        this.executorService = Executors.newCachedThreadPool();
+
         // Initialize Adventure
         this.adventure = BungeeAudiences.create(this);
 
@@ -42,10 +50,10 @@ public class CommandBlockerBungee extends Plugin {
         this.configManager = new ConfigManager(this);
         this.configManager.loadConfiguration();
         
-        this.databaseManager = new DatabaseManager(this, configManager);
+        this.databaseManager = new DatabaseManager(this, configManager, executorService);
         this.databaseManager.init();
         
-        this.webhookManager = new WebhookManager(this, configManager);
+        this.webhookManager = new WebhookManager(this, configManager, executorService);
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
@@ -72,6 +80,18 @@ public class CommandBlockerBungee extends Plugin {
         if (databaseManager != null) {
             databaseManager.close();
         }
+        
+        if (executorService != null) {
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+            }
+        }
+        
         getLogger().info("CommandBlockerBungee has been disabled!");
     }
 

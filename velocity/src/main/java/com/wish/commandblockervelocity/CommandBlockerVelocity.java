@@ -24,6 +24,10 @@ import java.nio.file.Path;
 
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
@@ -37,6 +41,7 @@ public class CommandBlockerVelocity {
     private final Logger logger;
     private final Path dataDirectory;
     private final Metrics.Factory metricsFactory;
+    private ExecutorService executorService;
 
     private ConfigManager configManager;
     private CooldownManager cooldownManager;
@@ -53,6 +58,9 @@ public class CommandBlockerVelocity {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
+        // Initialize Thread Pool
+        this.executorService = Executors.newCachedThreadPool();
+
         // ASCII Art using Legacy serializer for simplicity in logger or just raw string if logger supports it.
         // Slf4j logger handles strings.
         logger.info("\n" +
@@ -69,10 +77,10 @@ public class CommandBlockerVelocity {
         this.configManager = new ConfigManager(this, dataDirectory);
         this.configManager.loadConfiguration();
         
-        this.databaseManager = new DatabaseManager(this, configManager, dataDirectory);
+        this.databaseManager = new DatabaseManager(this, configManager, dataDirectory, executorService);
         this.databaseManager.init();
         
-        this.webhookManager = new WebhookManager(this, configManager);
+        this.webhookManager = new WebhookManager(this, configManager, executorService);
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
@@ -103,6 +111,18 @@ public class CommandBlockerVelocity {
         if (databaseManager != null) {
             databaseManager.close();
         }
+        
+        if (executorService != null) {
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+            }
+        }
+
         logger.info("CommandBlockerVelocity has been disabled!");
     }
     

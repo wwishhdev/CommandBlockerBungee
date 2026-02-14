@@ -12,23 +12,27 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
+import java.util.concurrent.ExecutorService;
+
 public class WebhookManager {
 
     private final CommandBlockerBungee plugin;
     private final ConfigManager config;
     private final HttpClient httpClient;
+    private final ExecutorService executor;
     private final Queue<WebhookRequest> queue = new ConcurrentLinkedQueue<>();
-    private static final int MAX_QUEUE_SIZE = 500;
+    private static final int MAX_QUEUE_SIZE = 100; // Reduced to 100 for fail-fast
 
-    public WebhookManager(CommandBlockerBungee plugin, ConfigManager config) {
+    public WebhookManager(CommandBlockerBungee plugin, ConfigManager config, ExecutorService executor) {
         this.plugin = plugin;
         this.config = config;
+        this.executor = executor;
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         
-        // Rate limit processor (Process max 2 webhooks per second)
+        // Rate limit processor (Process max 4 webhooks per second)
         plugin.getProxy().getScheduler().schedule(plugin, this::processQueue, 1, 1, TimeUnit.SECONDS);
     }
 
@@ -45,8 +49,8 @@ public class WebhookManager {
     private void processQueue() {
         if (queue.isEmpty()) return;
 
-        // Process up to 2 requests per execution to avoid rate limits
-        for (int i = 0; i < 2; i++) {
+        // Process up to 4 requests per execution (approx 4/sec)
+        for (int i = 0; i < 4; i++) {
             WebhookRequest req = queue.poll();
             if (req == null) break;
             
@@ -82,7 +86,7 @@ public class WebhookManager {
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to send Discord webhook: " + e.getMessage());
             }
-        });
+        }, executor);
     }
 
     private static class WebhookRequest {

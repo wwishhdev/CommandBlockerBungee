@@ -17,12 +17,14 @@ public class DatabaseManager {
 
     private final CommandBlockerBungee plugin;
     private final ConfigManager config;
+    private final java.util.concurrent.ExecutorService executor;
     private HikariDataSource dataSource;
     private String tablePrefix;
 
-    public DatabaseManager(CommandBlockerBungee plugin, ConfigManager config) {
+    public DatabaseManager(CommandBlockerBungee plugin, ConfigManager config, java.util.concurrent.ExecutorService executor) {
         this.plugin = plugin;
         this.config = config;
+        this.executor = executor;
     }
 
     public void init() {
@@ -94,7 +96,7 @@ public class DatabaseManager {
             } catch (SQLException e) {
                 plugin.getLogger().severe("Error saving cooldown data: " + e.getMessage());
             }
-        });
+        }, executor);
     }
 
     public CompletableFuture<CooldownData> loadCooldown(UUID uuid) {
@@ -117,7 +119,7 @@ public class DatabaseManager {
                 plugin.getLogger().severe("Error loading cooldown data: " + e.getMessage());
             }
             return null;
-        });
+        }, executor);
     }
 
     public void reload() {

@@ -86,8 +86,8 @@ public class ChatListener implements Listener {
         String cursor = event.getCursor().toLowerCase();
         if (cursor.startsWith("/")) cursor = cursor.substring(1);
         
-        // Fix: Properly handle spacing in tab complete
-        String[] parts = cursor.split(" ", 2);
+        // Fix: Properly handle spacing in tab complete (Regex split)
+        String[] parts = cursor.trim().split("\\s+", 2);
         String base = parts[0];
         
         if (isCommandBlocked(base)) {

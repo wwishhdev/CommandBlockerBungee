@@ -78,7 +78,7 @@ public class ChatListener {
         String partialMessage = event.getPartialMessage();
         if (partialMessage.startsWith("/")) partialMessage = partialMessage.substring(1);
 
-        String[] parts = partialMessage.split(" ", 2);
+        String[] parts = partialMessage.trim().split("\\s+", 2);
         String baseCommand = parts[0];
 
         if (isCommandBlocked(baseCommand)) {
