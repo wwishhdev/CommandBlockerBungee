@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
-        version = "2.1.2",
+        version = "2.1.3",
         description = "A plugin to block commands in Velocity",
         authors = {"wwishhdev"}
 )

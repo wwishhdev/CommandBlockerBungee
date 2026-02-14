@@ -42,7 +42,7 @@ public class CommandBlockerBungee extends Plugin {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                ChatColor.YELLOW + "                CommandBlockerBungee v2.1.2 " + ChatColor.RED + "❤\n" +
+                ChatColor.YELLOW + "                CommandBlockerBungee v2.1.3 " + ChatColor.RED + "❤\n" +
                 ChatColor.AQUA + "                                                          by wwishhdev\n"
         ));
 
