@@ -58,8 +58,8 @@ public class CommandBlockerVelocity {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        // Initialize Thread Pool
-        this.executorService = Executors.newCachedThreadPool();
+        // Initialize Thread Pool (Fixed size to prevent thread exhaustion)
+        this.executorService = Executors.newFixedThreadPool(16);
 
         // ASCII Art using Legacy serializer for simplicity in logger or just raw string if logger supports it.
         // Slf4j logger handles strings.

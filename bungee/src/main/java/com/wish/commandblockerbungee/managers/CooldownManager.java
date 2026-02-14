@@ -81,7 +81,7 @@ public class CooldownManager {
 
             attempts.incrementAttempts();
 
-            if (attempts.attempts >= configManager.getMaxAttempts()) {
+            if (attempts.attempts > configManager.getMaxAttempts()) {
                 attempts.setTimeout(configManager.getTimeoutDuration());
                 String timeLeft = String.valueOf(configManager.getTimeoutDuration());
                 

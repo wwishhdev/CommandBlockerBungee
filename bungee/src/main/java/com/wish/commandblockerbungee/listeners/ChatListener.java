@@ -106,13 +106,19 @@ public class ChatListener implements Listener {
             cleanCommand = cleanCommand.substring(1);
         }
         
-                // Fix: Trim again to handle "/ op" -> " op" -> "op"
+                        // Fix: Trim again to handle "/ op" -> " op" -> "op"
         
-                cleanCommand = cleanCommand.trim();
+                        cleanCommand = cleanCommand.trim();
         
+                        
         
+                        // Fix: Normalize spacing around colons to prevent "/minecraft : op" bypass
         
-                // Use Unicode-aware regex to catch non-breaking spaces
+                        cleanCommand = cleanCommand.replaceAll("\\s*:\\s*", ":");
+        
+                
+        
+                        // Use Unicode-aware regex to catch non-breaking spaces
         
                 String[] parts = cleanCommand.split("(?U)\\s+", 2);
         

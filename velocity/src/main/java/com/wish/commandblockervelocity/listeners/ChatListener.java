@@ -99,6 +99,10 @@ public class ChatListener {
 
         // FIX: Limpiamos espacios sobrantes despues de la barra y usamos regex para el split
         cleanCommand = cleanCommand.trim();
+        
+        // Fix: Normalize spacing around colons to prevent "/minecraft : op" bypass
+        cleanCommand = cleanCommand.replaceAll("\\s*:\\s*", ":");
+        
         // Use Unicode-aware regex to catch non-breaking spaces
         String[] parts = cleanCommand.split("(?U)\\s+", 2);
         

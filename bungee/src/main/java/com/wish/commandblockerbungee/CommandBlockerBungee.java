@@ -27,8 +27,8 @@ public class CommandBlockerBungee extends Plugin {
 
     @Override
     public void onEnable() {
-        // Initialize Thread Pool
-        this.executorService = Executors.newCachedThreadPool();
+        // Initialize Thread Pool (Fixed size to prevent thread exhaustion)
+        this.executorService = Executors.newFixedThreadPool(16);
 
         // Initialize Adventure
         this.adventure = BungeeAudiences.create(this);
