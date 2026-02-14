@@ -78,7 +78,8 @@ public class ChatListener {
         String partialMessage = event.getPartialMessage();
         if (partialMessage.startsWith("/")) partialMessage = partialMessage.substring(1);
 
-        String[] parts = partialMessage.trim().split("\\s+", 2);
+        // Use Unicode-aware regex
+        String[] parts = partialMessage.trim().split("(?U)\\s+", 2);
         String baseCommand = parts[0];
 
         if (isCommandBlocked(baseCommand)) {
@@ -98,7 +99,8 @@ public class ChatListener {
 
         // FIX: Limpiamos espacios sobrantes despues de la barra y usamos regex para el split
         cleanCommand = cleanCommand.trim();
-        String[] parts = cleanCommand.split("\\s+", 2);
+        // Use Unicode-aware regex to catch non-breaking spaces
+        String[] parts = cleanCommand.split("(?U)\\s+", 2);
         
         if (parts.length == 0) return false;
         String baseCommand = parts[0];

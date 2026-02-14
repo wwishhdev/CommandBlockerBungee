@@ -54,9 +54,10 @@ public class WebhookManager {
             WebhookRequest req = queue.poll();
             if (req == null) break;
             
-            // Sanitize markdown in player name
+            // Sanitize markdown in player name and command
             String safePlayer = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
-            send(safePlayer, req.command);
+            String safeCommand = req.command.replaceAll("([_`*~|])", "\\\\$1");
+            send(safePlayer, safeCommand);
         }
     }
 

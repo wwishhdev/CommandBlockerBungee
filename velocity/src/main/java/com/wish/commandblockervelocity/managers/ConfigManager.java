@@ -196,8 +196,9 @@ public class ConfigManager {
 
     public String escape(String text) {
         if (text == null) return "";
-        // Strip legacy color codes (&c, &l)
-        return miniMessage.escapeTags(text.replace("&", ""));
+        // Strip only valid legacy color codes (&c, &l, etc)
+        String clean = text.replaceAll("(?i)&[0-9a-fk-or]", "");
+        return miniMessage.escapeTags(clean);
     }
     
     // Kept for compatibility if needed, but 'parse' is preferred

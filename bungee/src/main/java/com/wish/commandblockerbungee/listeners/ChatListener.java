@@ -86,8 +86,9 @@ public class ChatListener implements Listener {
         String cursor = event.getCursor().toLowerCase();
         if (cursor.startsWith("/")) cursor = cursor.substring(1);
         
-        // Fix: Properly handle spacing in tab complete (Regex split)
-        String[] parts = cursor.trim().split("\\s+", 2);
+        // Fix: Properly handle spacing in tab complete (Unicode-aware Regex split)
+        // (?U) enables UNICODE_CHARACTER_CLASS mode
+        String[] parts = cursor.trim().split("(?U)\\s+", 2);
         String base = parts[0];
         
         if (isCommandBlocked(base)) {
@@ -105,11 +106,19 @@ public class ChatListener implements Listener {
             cleanCommand = cleanCommand.substring(1);
         }
         
-        // Fix: Trim again to handle "/ op" -> " op" -> "op"
-        cleanCommand = cleanCommand.trim();
-
-        String[] parts = cleanCommand.split("\\s+", 2);
-        if (parts.length == 0) return false;
+                // Fix: Trim again to handle "/ op" -> " op" -> "op"
+        
+                cleanCommand = cleanCommand.trim();
+        
+        
+        
+                // Use Unicode-aware regex to catch non-breaking spaces
+        
+                String[] parts = cleanCommand.split("(?U)\\s+", 2);
+        
+                
+        
+                if (parts.length == 0) return false;
         String baseCommand = parts[0];
 
         if (baseCommand.isEmpty()) return false;
