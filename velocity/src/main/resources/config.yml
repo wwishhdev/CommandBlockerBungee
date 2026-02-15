@@ -137,3 +137,4 @@ discord-webhook:
   username: "CommandBlocker"
   avatar-url: "https://i.imgur.com/example.png"
   content: "**{player}** tried to use blocked command: `{command}`"
+  rate-limit: 10            # Seconds between webhook messages per player (1-300)

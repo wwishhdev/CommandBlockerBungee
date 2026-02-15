@@ -246,6 +246,11 @@ public class ConfigManager {
         return configuration.getString("discord-webhook.content", "**{player}** tried to use blocked command: `{command}`");
     }
 
+    public int getWebhookRateLimit() {
+        int limit = configuration.getInt("discord-webhook.rate-limit", 10);
+        return Math.max(1, Math.min(limit, 300));
+    }
+
     // ========================================================================
     // Notification Actions
     // ========================================================================

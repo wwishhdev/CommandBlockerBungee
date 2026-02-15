@@ -5,8 +5,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -22,6 +24,7 @@ public class WebhookManager {
     private final ExecutorService executor;
     private final Queue<WebhookRequest> queue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger queueSize = new AtomicInteger(0);
+    private final Map<String, Long> playerLastWebhook = new ConcurrentHashMap<>();
     private static final int MAX_QUEUE_SIZE = 100;
 
     public WebhookManager(CommandBlockerVelocity plugin, ConfigManager config, ExecutorService executor) {
@@ -51,6 +54,16 @@ public class WebhookManager {
         if (queueSize.get() >= MAX_QUEUE_SIZE) {
             return;
         }
+
+        // Per-player rate limit
+        long now = System.currentTimeMillis();
+        long rateLimitMs = config.getWebhookRateLimit() * 1000L;
+        Long lastSent = playerLastWebhook.get(playerName);
+        if (lastSent != null && (now - lastSent) < rateLimitMs) {
+            return;
+        }
+        playerLastWebhook.put(playerName, now);
+
         queue.add(new WebhookRequest(playerName, command));
         queueSize.incrementAndGet();
     }
