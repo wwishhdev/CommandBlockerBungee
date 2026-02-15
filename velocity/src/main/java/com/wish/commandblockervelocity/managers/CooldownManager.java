@@ -70,9 +70,11 @@ public class CooldownManager {
 
             long timeSinceLastAttempt = (System.currentTimeMillis() - attempts.lastAttempt) / 1000;
 
-            // Reset if reset time passed OR if they served their timeout penalty
-            if (timeSinceLastAttempt > configManager.getResetAfter() || (attempts.attempts >= configManager.getMaxAttempts())) {
+            // Reset if idle time passed OR if they served their timeout penalty
+            if (timeSinceLastAttempt > configManager.getResetAfter()
+                    || (attempts.timeoutUntil > 0 && System.currentTimeMillis() >= attempts.timeoutUntil)) {
                 attempts.resetAttempts();
+                attempts.timeoutUntil = 0;
             }
 
             attempts.incrementAttempts();
