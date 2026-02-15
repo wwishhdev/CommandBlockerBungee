@@ -92,10 +92,9 @@ public class ChatListener {
         if (command == null || command.trim().isEmpty()) return false;
 
         String cleanCommand = command.trim().toLowerCase();
-        // Just in case
-        if (cleanCommand.startsWith("/")) {
-            cleanCommand = cleanCommand.substring(1);
-        }
+        
+        // Fix: Remove ALL leading slashes to prevent "//op" bypass
+        cleanCommand = cleanCommand.replaceAll("^/+", "");
 
         // FIX: Limpiamos espacios sobrantes despues de la barra y usamos regex para el split
         cleanCommand = cleanCommand.trim();

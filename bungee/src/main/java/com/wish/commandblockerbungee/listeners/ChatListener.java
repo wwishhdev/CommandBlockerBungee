@@ -98,21 +98,23 @@ public class ChatListener implements Listener {
         }
     }
 
-    private boolean isCommandBlocked(String command) {
-        if (command == null || command.trim().isEmpty()) return false;
+        private boolean isCommandBlocked(String command) {
 
-        String cleanCommand = command.trim().toLowerCase();
-        if (cleanCommand.startsWith("/")) {
-            cleanCommand = cleanCommand.substring(1);
-        }
-        
-                        // Fix: Trim again to handle "/ op" -> " op" -> "op"
-        
-                        cleanCommand = cleanCommand.trim();
-        
-                        
-        
-                        // Fix: Normalize spacing around colons to prevent "/minecraft : op" bypass
+            if (command == null || command.trim().isEmpty()) return false;
+
+    
+
+            String cleanCommand = command.trim().toLowerCase();
+
+            
+
+            // Fix: Remove ALL leading slashes to prevent "//op" bypass
+
+            cleanCommand = cleanCommand.replaceAll("^/+", "");
+
+            
+
+            // Fix: Normalize spacing around colons to prevent "/minecraft : op" bypass
         
                         cleanCommand = cleanCommand.replaceAll("\\s*:\\s*", ":");
         

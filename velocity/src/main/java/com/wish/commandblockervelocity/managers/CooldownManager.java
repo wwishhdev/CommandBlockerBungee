@@ -64,10 +64,12 @@ public class CooldownManager {
             return true;
         }
 
-        // Check reset
+        // Check reset logic (Fix Bear Trap)
         synchronized(attempts) {
             long timeSinceLastAttempt = (System.currentTimeMillis() - attempts.lastAttempt) / 1000;
-            if (timeSinceLastAttempt > configManager.getResetAfter()) {
+            
+            // Reset if reset time passed OR if they served their timeout penalty
+            if (timeSinceLastAttempt > configManager.getResetAfter() || (attempts.attempts >= configManager.getMaxAttempts() && !attempts.isTimedOut())) {
                 attempts.resetAttempts();
             }
 
@@ -117,7 +119,7 @@ public class CooldownManager {
 
     private static class CommandAttempts {
         int attempts = 0;
-        long lastAttempt = System.currentTimeMillis();
+        volatile long lastAttempt = System.currentTimeMillis();
         long timeoutUntil = 0;
 
         synchronized boolean isTimedOut() {

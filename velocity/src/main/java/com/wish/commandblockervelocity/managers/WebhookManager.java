@@ -64,9 +64,19 @@ public class WebhookManager {
     private void send(String playerName, String command) {
         CompletableFuture.runAsync(() -> {
             try {
+                // Redact sensitive commands
+                String processedCommand = command;
+                String lowerCmd = command.toLowerCase();
+                if (lowerCmd.startsWith("/login") || lowerCmd.startsWith("/register") || lowerCmd.startsWith("/changepassword")) {
+                    String[] parts = command.split("\\s+");
+                    if (parts.length > 1) {
+                        processedCommand = parts[0] + " *****";
+                    }
+                }
+
                 String content = config.getWebhookContent()
                         .replace("{player}", playerName)
-                        .replace("{command}", command);
+                        .replace("{command}", processedCommand);
                 
                 String jsonContent = escapeJson(content);
                 String jsonUsername = escapeJson(config.getWebhookUsername());
