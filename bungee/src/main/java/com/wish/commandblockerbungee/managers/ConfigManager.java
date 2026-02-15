@@ -1,14 +1,5 @@
 package com.wish.commandblockerbungee.managers;
 
-import com.wish.commandblockerbungee.CommandBlockerBungee;
-import com.wish.commandblockerbungee.utils.NotificationAction;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.md_5.bungee.config.Configuration;
-import net.md_5.bungee.config.ConfigurationProvider;
-import net.md_5.bungee.config.YamlConfiguration;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +8,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import com.wish.commandblockerbungee.CommandBlockerBungee;
+import com.wish.commandblockerbungee.utils.NotificationAction;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.md_5.bungee.config.Configuration;
+import net.md_5.bungee.config.ConfigurationProvider;
+import net.md_5.bungee.config.YamlConfiguration;
 
 public class ConfigManager {
 
@@ -53,6 +54,7 @@ public class ConfigManager {
             configuration = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
             if (configuration == null) {
                 plugin.getLogger().severe("Error loading configuration!");
+                return;
             }
         } catch (IOException e) {
             plugin.getLogger().severe("Error loading configuration file: " + e.getMessage());
@@ -67,9 +69,7 @@ public class ConfigManager {
         return parse(configuration.getString("messages.block-message", "<red>This command is blocked."));
     }
 
-    public String getBypassPermission() {
-        return configuration.getString("bypass-permission", "commandblocker.bypass");
-    }
+
 
     public boolean isAliasDetectionEnabled() {
         return configuration.getBoolean("alias-detection.enabled", true);
@@ -116,7 +116,7 @@ public class ConfigManager {
     }
 
     public String getNotifyPermission() {
-        return configuration.getString("notifications.permission", "commandblocker.notify");
+        return configuration.getString("permissions.notify", "commandblocker.notify");
     }
 
     public String getNotifyMessageRaw() {
@@ -209,11 +209,13 @@ public class ConfigManager {
     }
     
     public int getDatabaseMaxPoolSize() {
-        return configuration.getInt("database.max-pool-size", 10);
+        int size = configuration.getInt("database.max-pool-size", 10);
+        return Math.max(1, Math.min(size, 50));
     }
     
     public int getDatabaseConnectionTimeout() {
-        return configuration.getInt("database.connection-timeout", 30000);
+        int timeout = configuration.getInt("database.connection-timeout", 30000);
+        return Math.max(1000, Math.min(timeout, 120000));
     }
 
     // ========================================================================

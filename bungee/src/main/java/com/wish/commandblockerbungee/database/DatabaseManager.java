@@ -1,10 +1,5 @@
 package com.wish.commandblockerbungee.database;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import com.wish.commandblockerbungee.CommandBlockerBungee;
-import com.wish.commandblockerbungee.managers.ConfigManager;
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,6 +7,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
+import com.wish.commandblockerbungee.CommandBlockerBungee;
+import com.wish.commandblockerbungee.managers.ConfigManager;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class DatabaseManager {
 
@@ -58,6 +58,9 @@ public class DatabaseManager {
         } else {
             hikariConfig.setDriverClassName("com.wish.commandblockerbungee.libs.sqlite.JDBC");
             File file = new File(plugin.getDataFolder(), "database.db");
+            if (!file.getParentFile().exists()) {
+                file.getParentFile().mkdirs();
+            }
             hikariConfig.setJdbcUrl("jdbc:sqlite:" + file.getAbsolutePath());
         }
 
@@ -87,11 +90,16 @@ public class DatabaseManager {
         
         return CompletableFuture.runAsync(() -> {
             try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement("REPLACE INTO " + tablePrefix + "cooldowns (uuid, attempts, last_attempt, timeout_until) VALUES (?, ?, ?, ?)")) {
+                 PreparedStatement ps = conn.prepareStatement(
+                         "INSERT INTO " + tablePrefix + "cooldowns (uuid, attempts, last_attempt, timeout_until) VALUES (?, ?, ?, ?) " +
+                         "ON CONFLICT(uuid) DO UPDATE SET attempts = ?, last_attempt = ?, timeout_until = ?")) {
                 ps.setString(1, uuid.toString());
                 ps.setInt(2, attempts);
                 ps.setLong(3, lastAttempt);
                 ps.setLong(4, timeoutUntil);
+                ps.setInt(5, attempts);
+                ps.setLong(6, lastAttempt);
+                ps.setLong(7, timeoutUntil);
                 ps.executeUpdate();
             } catch (SQLException e) {
                 plugin.getLogger().severe("Error saving cooldown data: " + e.getMessage());

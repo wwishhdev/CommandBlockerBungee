@@ -1,13 +1,14 @@
 package com.wish.commandblockerbungee.managers;
 
-import com.wish.commandblockerbungee.CommandBlockerBungee;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-
-import com.wish.commandblockerbungee.database.DatabaseManager;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
+import com.wish.commandblockerbungee.CommandBlockerBungee;
+import com.wish.commandblockerbungee.database.DatabaseManager;
+
+import net.md_5.bungee.api.connection.ProxiedPlayer;
 
 public class CooldownManager {
 
@@ -33,25 +34,20 @@ public class CooldownManager {
             if (data != null) {
                 playerAttempts.compute(uuid, (key, current) -> {
                     if (current == null) {
-                        // No local attempts yet, just load db
                         CommandAttempts attempts = new CommandAttempts();
-                        attempts.attempts = data.attempts;
-                        attempts.lastAttempt = data.lastAttempt;
-                        attempts.timeoutUntil = data.timeoutUntil;
+                        synchronized (attempts) {
+                            attempts.attempts = data.attempts;
+                            attempts.lastAttempt = data.lastAttempt;
+                            attempts.timeoutUntil = data.timeoutUntil;
+                        }
                         return attempts;
                     } else {
-                        // Race condition hit: Player chattered before DB loaded.
-                        // Strategy: Keep the stricter of the two or merge.
-                        // Here we take DB timeout if it's longer, and sum attempts? 
-                        // Safer to just adopt DB state if it's a timeout, otherwise keep local activity?
-                        // Let's adopt DB state BUT if local has more recent activity, update lastAttempt.
-                        
-                        // Simple merge: If DB says timed out, enforce it.
-                        if (System.currentTimeMillis() < data.timeoutUntil) {
-                            current.timeoutUntil = data.timeoutUntil;
+                        synchronized (current) {
+                            if (System.currentTimeMillis() < data.timeoutUntil) {
+                                current.timeoutUntil = data.timeoutUntil;
+                            }
+                            current.attempts = Math.max(current.attempts, data.attempts);
                         }
-                        // Add DB attempts to current? Or just max?
-                        current.attempts = Math.max(current.attempts, data.attempts);
                         return current;
                     }
                 });
@@ -65,19 +61,18 @@ public class CooldownManager {
         UUID uuid = player.getUniqueId();
         CommandAttempts attempts = playerAttempts.computeIfAbsent(uuid, k -> new CommandAttempts());
 
-        // Check timeout
-        if (attempts.isTimedOut()) {
-            String timeLeft = String.valueOf(attempts.getRemainingTimeout());
-            plugin.adventure().player(player).sendMessage(configManager.parse(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
-            return true;
-        }
+        synchronized (attempts) {
+            // Check timeout
+            if (attempts.isTimedOut()) {
+                String timeLeft = String.valueOf(attempts.getRemainingTimeout());
+                plugin.adventure().player(player).sendMessage(configManager.parse(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
+                return true;
+            }
 
-        // Check reset logic (Fix Bear Trap)
-        synchronized(attempts) {
             long timeSinceLastAttempt = (System.currentTimeMillis() - attempts.lastAttempt) / 1000;
-            
+
             // Reset if reset time passed OR if they served their timeout penalty
-            if (timeSinceLastAttempt > configManager.getResetAfter() || (attempts.attempts >= configManager.getMaxAttempts() && !attempts.isTimedOut())) {
+            if (timeSinceLastAttempt > configManager.getResetAfter() || (attempts.attempts >= configManager.getMaxAttempts())) {
                 attempts.resetAttempts();
             }
 
@@ -86,10 +81,9 @@ public class CooldownManager {
             if (attempts.attempts > configManager.getMaxAttempts()) {
                 attempts.setTimeout(configManager.getTimeoutDuration());
                 String timeLeft = String.valueOf(configManager.getTimeoutDuration());
-                
+
                 plugin.adventure().player(player).sendMessage(configManager.parse(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
 
-                // Notify staff about the timeout event specifically
                 if (configManager.isNotifyOnTimeout()) {
                     notifyStaff(configManager.getTimeoutNotificationRaw().replace("{player}", configManager.escape(player.getName())));
                 }
@@ -103,7 +97,9 @@ public class CooldownManager {
     public void removeCooldown(UUID uuid) {
         CommandAttempts attempts = playerAttempts.remove(uuid);
         if (attempts != null && configManager.isDatabaseEnabled()) {
-            databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+            synchronized (attempts) {
+                databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+            }
         }
     }
 

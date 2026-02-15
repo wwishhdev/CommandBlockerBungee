@@ -1,15 +1,5 @@
 package com.wish.commandblockervelocity.managers;
 
-import com.velocitypowered.api.plugin.PluginContainer;
-import com.wish.commandblockervelocity.CommandBlockerVelocity;
-import com.wish.commandblockervelocity.utils.NotificationAction;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.spongepowered.configurate.ConfigurationNode;
-import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
-
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -17,8 +7,17 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
+
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+
+import com.wish.commandblockervelocity.CommandBlockerVelocity;
+import com.wish.commandblockervelocity.utils.NotificationAction;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public class ConfigManager {
 
@@ -98,9 +97,7 @@ public class ConfigManager {
         return parse(getString("<red>This command is blocked.", "messages", "block-message"));
     }
 
-    public String getBypassPermission() {
-        return getString("commandblocker.bypass", "bypass-permission");
-    }
+
 
     // Alias Detection
     public boolean isAliasDetectionEnabled() {
@@ -151,7 +148,7 @@ public class ConfigManager {
     }
 
     public String getNotifyPermission() {
-        return getString("commandblocker.notify", "notifications", "permission");
+        return getString("commandblocker.notify", "permissions", "notify");
     }
 
     public String getNotifyMessageRaw() {
@@ -250,11 +247,13 @@ public class ConfigManager {
     }
 
     public int getDatabaseMaxPoolSize() {
-        return getInt(10, "database", "max-pool-size");
+        int size = getInt(10, "database", "max-pool-size");
+        return Math.max(1, Math.min(size, 50));
     }
 
     public int getDatabaseConnectionTimeout() {
-        return getInt(30000, "database", "connection-timeout");
+        int timeout = getInt(30000, "database", "connection-timeout");
+        return Math.max(1000, Math.min(timeout, 120000));
     }
 
     // ========================================================================

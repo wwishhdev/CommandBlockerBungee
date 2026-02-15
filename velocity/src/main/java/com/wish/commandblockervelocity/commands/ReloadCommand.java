@@ -30,8 +30,9 @@ public class ReloadCommand implements SimpleCommand {
                      plugin.getLogger().info(config.getConsoleReloadMessageRaw().replace("{player}", playerName));
                 }
             } catch (Exception e) {
-                source.sendMessage(config.color(config.getReloadErrorMessageRaw().replace("{error}", e.getMessage())));
-                plugin.getLogger().error("Error reloading configuration: " + e.getMessage());
+                String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                source.sendMessage(config.color(config.getReloadErrorMessageRaw().replace("{error}", errorMsg)));
+                plugin.getLogger().error("Error reloading configuration: " + errorMsg);
             }
         } else {
             source.sendMessage(config.getNoPermissionMessage());

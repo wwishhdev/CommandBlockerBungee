@@ -1,10 +1,19 @@
 package com.wish.commandblockervelocity;
 
+import java.nio.file.Path;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import org.bstats.velocity.Metrics;
+import org.slf4j.Logger;
+
 import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.command.CommandMeta;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -15,18 +24,6 @@ import com.wish.commandblockervelocity.listeners.ConnectionListener;
 import com.wish.commandblockervelocity.managers.ConfigManager;
 import com.wish.commandblockervelocity.managers.CooldownManager;
 import com.wish.commandblockervelocity.managers.WebhookManager;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bstats.velocity.Metrics;
-import org.slf4j.Logger;
-
-import java.nio.file.Path;
-
-import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 @Plugin(
         id = "commandblockervelocity",
@@ -70,7 +67,7 @@ public class CommandBlockerVelocity {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                "                CommandBlockerVelocity v2.1.2 \u2764\n" +
+                "                CommandBlockerVelocity v2.1.3 \u2764\n" +
                 "                                                          by wwishhdev\n");
 
         // Managers
@@ -91,7 +88,7 @@ public class CommandBlockerVelocity {
         // Commands
         CommandManager commandManager = proxy.getCommandManager();
         CommandMeta commandMeta = commandManager.metaBuilder("cblockerreload")
-                .aliases("commandblocker.reload", "cbreload")
+                .aliases("cbreload")
                 .plugin(this)
                 .build();
 

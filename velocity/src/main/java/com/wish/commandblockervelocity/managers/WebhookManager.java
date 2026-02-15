@@ -1,18 +1,18 @@
 package com.wish.commandblockervelocity.managers;
 
-import com.wish.commandblockervelocity.CommandBlockerVelocity;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
-
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.wish.commandblockervelocity.CommandBlockerVelocity;
 
 public class WebhookManager {
 
@@ -21,6 +21,7 @@ public class WebhookManager {
     private final HttpClient httpClient;
     private final ExecutorService executor;
     private final Queue<WebhookRequest> queue = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger queueSize = new AtomicInteger(0);
     private static final int MAX_QUEUE_SIZE = 100;
 
     public WebhookManager(CommandBlockerVelocity plugin, ConfigManager config, ExecutorService executor) {
@@ -39,12 +40,19 @@ public class WebhookManager {
 
     public void sendWebhook(String playerName, String command) {
         if (!config.isWebhookEnabled() || config.getWebhookUrl().isEmpty()) return;
+
+        // Validate webhook URL to prevent SSRF
+        String url = config.getWebhookUrl().toLowerCase();
+        if (!url.startsWith("https://discord.com/api/webhooks/") && !url.startsWith("https://discordapp.com/api/webhooks/")) {
+            plugin.getLogger().warn("Discord webhook URL is not a valid Discord webhook. Skipping.");
+            return;
+        }
         
-        if (queue.size() >= MAX_QUEUE_SIZE) {
-            // Drop request to prevent DoS/OOM
+        if (queueSize.get() >= MAX_QUEUE_SIZE) {
             return;
         }
         queue.add(new WebhookRequest(playerName, command));
+        queueSize.incrementAndGet();
     }
 
     private void processQueue() {
@@ -53,6 +61,7 @@ public class WebhookManager {
         for (int i = 0; i < 4; i++) {
             WebhookRequest req = queue.poll();
             if (req == null) break;
+            queueSize.decrementAndGet();
             
             // Sanitize markdown in player name and command
             String safePlayer = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
@@ -64,10 +73,12 @@ public class WebhookManager {
     private void send(String playerName, String command) {
         CompletableFuture.runAsync(() -> {
             try {
-                // Redact sensitive commands
+                // Redact sensitive commands (handle with and without leading slash)
                 String processedCommand = command;
-                String lowerCmd = command.toLowerCase();
-                if (lowerCmd.startsWith("/login") || lowerCmd.startsWith("/register") || lowerCmd.startsWith("/changepassword")) {
+                String lowerCmd = command.toLowerCase().replaceAll("^/+", "");
+                if (lowerCmd.startsWith("login") || lowerCmd.startsWith("register") || lowerCmd.startsWith("changepassword")
+                        || lowerCmd.startsWith("l ") || lowerCmd.startsWith("log ") || lowerCmd.startsWith("reg ")
+                        || lowerCmd.startsWith("passwd") || lowerCmd.startsWith("premium") || lowerCmd.startsWith("auth")) {
                     String[] parts = command.split("\\s+");
                     if (parts.length > 1) {
                         processedCommand = parts[0] + " *****";

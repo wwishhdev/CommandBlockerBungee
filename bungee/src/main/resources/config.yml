@@ -54,6 +54,8 @@ blocked-commands:
   - 'timings'
   - 'plugins'
   - 'pl'
+  # WARNING: 'execute' can be used to run blocked commands indirectly (e.g. /execute run op)
+  - 'execute'
 
 # =============================================================================
 # Allowed Commands List

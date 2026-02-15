@@ -1,10 +1,13 @@
 package com.wish.commandblockerbungee.listeners;
 
+import java.util.List;
+
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import com.wish.commandblockerbungee.managers.ConfigManager;
 import com.wish.commandblockerbungee.managers.CooldownManager;
 import com.wish.commandblockerbungee.managers.WebhookManager;
 import com.wish.commandblockerbungee.utils.NotificationAction;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -15,8 +18,6 @@ import net.md_5.bungee.api.event.TabCompleteEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
-
-import java.util.List;
 
 public class ChatListener implements Listener {
 
@@ -98,52 +99,42 @@ public class ChatListener implements Listener {
         }
     }
 
-        private boolean isCommandBlocked(String command) {
+    private boolean isCommandBlocked(String command) {
+        if (command == null || command.trim().isEmpty()) return false;
 
-            if (command == null || command.trim().isEmpty()) return false;
+        String cleanCommand = command.trim().toLowerCase();
 
-    
+        // Strip ALL leading slashes to prevent "//op" bypass
+        cleanCommand = cleanCommand.replaceAll("^/+", "");
 
-            String cleanCommand = command.trim().toLowerCase();
+        // Strip zero-width Unicode characters to prevent invisible char bypass
+        // Covers: Zero-Width Space (200B), Zero-Width Non-Joiner (200C),
+        // Zero-Width Joiner (200D), Word Joiner (2060), Zero-Width No-Break Space (FEFF)
+        cleanCommand = cleanCommand.replaceAll("[\\u200B\\u200C\\u200D\\u2060\\uFEFF]", "");
 
-            
+        // Normalize spacing around colons to prevent "/minecraft : op" bypass
+        cleanCommand = cleanCommand.replaceAll("\\s*:\\s*", ":");
 
-            // Fix: Remove ALL leading slashes to prevent "//op" bypass
+        // Use Unicode-aware regex to catch non-breaking spaces
+        String[] parts = cleanCommand.split("(?U)\\s+", 2);
 
-            cleanCommand = cleanCommand.replaceAll("^/+", "");
-
-            
-
-            // Fix: Normalize spacing around colons to prevent "/minecraft : op" bypass
-        
-                        cleanCommand = cleanCommand.replaceAll("\\s*:\\s*", ":");
-        
-                
-        
-                        // Use Unicode-aware regex to catch non-breaking spaces
-        
-                String[] parts = cleanCommand.split("(?U)\\s+", 2);
-        
-                
-        
-                if (parts.length == 0) return false;
+        if (parts.length == 0) return false;
         String baseCommand = parts[0];
 
         if (baseCommand.isEmpty()) return false;
 
-        // 1. Allowed Commands Check
+        // 1. Allowed Commands Check (takes priority)
         if (config.isAllowedCommandsEnabled()) {
             for (String allowed : config.getAllowedCommands()) {
                 if (allowed == null) continue;
                 String allowedLower = allowed.toLowerCase();
-                // Exact match or sub-command
                 if (baseCommand.equals(allowedLower) || cleanCommand.startsWith(allowedLower + " ")) return false;
             }
         }
 
         // 2. Blocked Commands Check
         List<String> blockedCommands = config.getBlockedCommands();
-        
+
         for (String blockedCmd : blockedCommands) {
             if (blockedCmd == null) continue;
             String blockedLower = blockedCmd.toLowerCase();
@@ -151,24 +142,43 @@ public class ChatListener implements Listener {
             // Exact match: "op" == "op"
             if (baseCommand.equals(blockedLower)) return true;
 
-            // Plugin prefix: "minecraft:op" == "minecraft:op"
-            if (config.isBlockPluginPrefix()) {
-                 // Check if command is exactly "plugin:command" where command is blocked
-                 if (baseCommand.contains(":")) {
-                     String[] cmdParts = baseCommand.split(":", 2);
-                     if (cmdParts.length > 1 && cmdParts[1].equals(blockedLower)) {
-                         return true;
-                     }
-                 }
-            }
+            // Alias detection features (only if master switch is enabled)
+            if (config.isAliasDetectionEnabled()) {
+                // Plugin prefix: "minecraft:op" → blocked
+                if (config.isBlockPluginPrefix()) {
+                    if (baseCommand.contains(":")) {
+                        String[] cmdParts = baseCommand.split(":", 2);
+                        if (cmdParts.length > 1 && cmdParts[1].equals(blockedLower)) {
+                            return true;
+                        }
+                    }
+                }
 
-            // Alias: Help subcommand (op help)
-            if (config.isBlockHelpSubcommand()) {
-                 if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) {
-                     return true;
-                 }
+                // Help subcommand: "op help" → blocked
+                if (config.isBlockHelpSubcommand()) {
+                    if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) {
+                        return true;
+                    }
+                }
             }
         }
+
+        // 3. Deep scan: detect blocked commands inside execution chains (e.g. /execute run op)
+        if (parts.length > 1) {
+            String args = parts[1];
+            String[] allTokens = args.split("(?U)\\s+");
+            for (String token : allTokens) {
+                // Strip plugin prefix from token if present
+                String cleanToken = token.contains(":") ? token.split(":", 2)[1] : token;
+                for (String blockedCmd : blockedCommands) {
+                    if (blockedCmd == null) continue;
+                    if (cleanToken.equals(blockedCmd.toLowerCase())) {
+                        return true;
+                    }
+                }
+            }
+        }
+
         return false;
     }
 

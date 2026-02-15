@@ -1,13 +1,13 @@
 package com.wish.commandblockervelocity.managers;
 
-import com.velocitypowered.api.proxy.Player;
-import com.wish.commandblockervelocity.CommandBlockerVelocity;
-
-import com.wish.commandblockervelocity.database.DatabaseManager;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
+import com.velocitypowered.api.proxy.Player;
+import com.wish.commandblockervelocity.CommandBlockerVelocity;
+import com.wish.commandblockervelocity.database.DatabaseManager;
 
 public class CooldownManager {
 
@@ -35,16 +35,19 @@ public class CooldownManager {
                 playerAttempts.compute(uuid, (key, current) -> {
                     if (current == null) {
                          CommandAttempts attempts = new CommandAttempts();
-                        attempts.attempts = data.attempts;
-                        attempts.lastAttempt = data.lastAttempt;
-                        attempts.timeoutUntil = data.timeoutUntil;
+                        synchronized (attempts) {
+                            attempts.attempts = data.attempts;
+                            attempts.lastAttempt = data.lastAttempt;
+                            attempts.timeoutUntil = data.timeoutUntil;
+                        }
                         return attempts;
                     } else {
-                        // Merge
-                        if (System.currentTimeMillis() < data.timeoutUntil) {
-                            current.timeoutUntil = data.timeoutUntil;
+                        synchronized (current) {
+                            if (System.currentTimeMillis() < data.timeoutUntil) {
+                                current.timeoutUntil = data.timeoutUntil;
+                            }
+                            current.attempts = Math.max(current.attempts, data.attempts);
                         }
-                        current.attempts = Math.max(current.attempts, data.attempts);
                         return current;
                     }
                 });
@@ -58,18 +61,17 @@ public class CooldownManager {
         UUID uuid = player.getUniqueId();
         CommandAttempts attempts = playerAttempts.computeIfAbsent(uuid, k -> new CommandAttempts());
 
-        if (attempts.isTimedOut()) {
-            String timeLeft = String.valueOf(attempts.getRemainingTimeout());
-            player.sendMessage(configManager.color(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
-            return true;
-        }
+        synchronized (attempts) {
+            if (attempts.isTimedOut()) {
+                String timeLeft = String.valueOf(attempts.getRemainingTimeout());
+                player.sendMessage(configManager.color(configManager.getTimeoutMessageRaw().replace("{time}", timeLeft + "s")));
+                return true;
+            }
 
-        // Check reset logic (Fix Bear Trap)
-        synchronized(attempts) {
             long timeSinceLastAttempt = (System.currentTimeMillis() - attempts.lastAttempt) / 1000;
-            
+
             // Reset if reset time passed OR if they served their timeout penalty
-            if (timeSinceLastAttempt > configManager.getResetAfter() || (attempts.attempts >= configManager.getMaxAttempts() && !attempts.isTimedOut())) {
+            if (timeSinceLastAttempt > configManager.getResetAfter() || (attempts.attempts >= configManager.getMaxAttempts())) {
                 attempts.resetAttempts();
             }
 
@@ -94,7 +96,9 @@ public class CooldownManager {
     public void removeCooldown(UUID uuid) {
         CommandAttempts attempts = playerAttempts.remove(uuid);
         if (attempts != null && configManager.isDatabaseEnabled()) {
-            databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+            synchronized (attempts) {
+                databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+            }
         }
     }
 

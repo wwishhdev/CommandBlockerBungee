@@ -36,7 +36,6 @@ build/
 .vscode/
 
 ### Mac OS ###
-.DS_600
 .DS_Store
 
 ### Custom ###
@@ -44,3 +43,5 @@ build.bat
 velocity/target/
 bungee/target/
 .gemini_security/
+dependency-reduced-pom.xml
+**/dependency-reduced-pom.xml
