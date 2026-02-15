@@ -113,8 +113,16 @@ public class CooldownManager {
     private void cleanupOldAttempts() {
         long currentTime = System.currentTimeMillis();
         int resetAfter = configManager.getResetAfter();
-        playerAttempts.entrySet().removeIf(entry ->
-                (currentTime - entry.getValue().lastAttempt) / 1000 > resetAfter * 2);
+        playerAttempts.entrySet().removeIf(entry -> {
+            boolean shouldRemove = (currentTime - entry.getValue().lastAttempt) / 1000 > resetAfter * 2;
+            if (shouldRemove && configManager.isDatabaseEnabled()) {
+                CommandAttempts a = entry.getValue();
+                synchronized (a) {
+                    databaseManager.saveCooldown(entry.getKey(), a.attempts, a.lastAttempt, a.timeoutUntil);
+                }
+            }
+            return shouldRemove;
+        });
     }
 
     public void clear() {

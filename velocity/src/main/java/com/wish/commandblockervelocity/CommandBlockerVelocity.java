@@ -55,8 +55,12 @@ public class CommandBlockerVelocity {
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-        // Initialize Thread Pool (Fixed size to prevent thread exhaustion)
-        this.executorService = Executors.newFixedThreadPool(16);
+        // Initialize config first to read thread pool size
+        this.configManager = new ConfigManager(this, dataDirectory);
+        this.configManager.loadConfiguration();
+
+        // Initialize Thread Pool (configurable size to prevent thread exhaustion)
+        this.executorService = Executors.newFixedThreadPool(configManager.getThreadPoolSize());
 
         // ASCII Art using Legacy serializer for simplicity in logger or just raw string if logger supports it.
         // Slf4j logger handles strings.
@@ -71,9 +75,6 @@ public class CommandBlockerVelocity {
                 "                                                          by wwishhdev\n");
 
         // Managers
-        this.configManager = new ConfigManager(this, dataDirectory);
-        this.configManager.loadConfiguration();
-        
         this.databaseManager = new DatabaseManager(this, configManager, dataDirectory, executorService);
         this.databaseManager.init();
         

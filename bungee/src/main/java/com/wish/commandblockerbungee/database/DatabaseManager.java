@@ -20,6 +20,7 @@ public class DatabaseManager {
     private final java.util.concurrent.ExecutorService executor;
     private HikariDataSource dataSource;
     private String tablePrefix;
+    private boolean useMySQL;
 
     public DatabaseManager(CommandBlockerBungee plugin, ConfigManager config, java.util.concurrent.ExecutorService executor) {
         this.plugin = plugin;
@@ -45,7 +46,9 @@ public class DatabaseManager {
 
         HikariConfig hikariConfig = new HikariConfig();
 
-        if (type.equalsIgnoreCase("mysql")) {
+        this.useMySQL = type.equalsIgnoreCase("mysql");
+
+        if (useMySQL) {
             hikariConfig.setDriverClassName("com.wish.commandblockerbungee.libs.mysql.cj.jdbc.Driver");
             // Removed hardcoded useSSL=false to allow secure connections if configured in environment/driver defaults
             hikariConfig.setJdbcUrl("jdbc:mysql://" + config.getDatabaseHost() + ":" + config.getDatabasePort() + "/" + config.getDatabaseName() + "?autoReconnect=" + config.isDatabaseAutoReconnect());
@@ -89,10 +92,11 @@ public class DatabaseManager {
         if (dataSource == null) return CompletableFuture.completedFuture(null);
         
         return CompletableFuture.runAsync(() -> {
+            String sql = useMySQL
+                    ? "INSERT INTO " + tablePrefix + "cooldowns (uuid, attempts, last_attempt, timeout_until) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE attempts = ?, last_attempt = ?, timeout_until = ?"
+                    : "INSERT INTO " + tablePrefix + "cooldowns (uuid, attempts, last_attempt, timeout_until) VALUES (?, ?, ?, ?) ON CONFLICT(uuid) DO UPDATE SET attempts = ?, last_attempt = ?, timeout_until = ?";
             try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(
-                         "INSERT INTO " + tablePrefix + "cooldowns (uuid, attempts, last_attempt, timeout_until) VALUES (?, ?, ?, ?) " +
-                         "ON CONFLICT(uuid) DO UPDATE SET attempts = ?, last_attempt = ?, timeout_until = ?")) {
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, uuid.toString());
                 ps.setInt(2, attempts);
                 ps.setLong(3, lastAttempt);

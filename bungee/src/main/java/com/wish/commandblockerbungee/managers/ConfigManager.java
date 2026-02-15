@@ -217,6 +217,11 @@ public class ConfigManager {
         int timeout = configuration.getInt("database.connection-timeout", 30000);
         return Math.max(1000, Math.min(timeout, 120000));
     }
+    
+    public int getThreadPoolSize() {
+        int size = configuration.getInt("database.thread-pool-size", 4);
+        return Math.max(1, Math.min(size, 32));
+    }
 
     // ========================================================================
     // Discord Webhook

@@ -1,9 +1,9 @@
 package com.wish.commandblockerbungee.listeners;
 
-import com.wish.commandblockerbungee.CommandBlockerBungee;
 import com.wish.commandblockerbungee.managers.CooldownManager;
-import net.md_5.bungee.api.event.PostLoginEvent;
+
 import net.md_5.bungee.api.event.PlayerDisconnectEvent;
+import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 

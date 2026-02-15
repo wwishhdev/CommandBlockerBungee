@@ -1,5 +1,11 @@
 package com.wish.commandblockerbungee;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import org.bstats.bungeecord.Metrics;
+
 import com.wish.commandblockerbungee.commands.ReloadCommand;
 import com.wish.commandblockerbungee.database.DatabaseManager;
 import com.wish.commandblockerbungee.listeners.ChatListener;
@@ -7,14 +13,10 @@ import com.wish.commandblockerbungee.listeners.ConnectionListener;
 import com.wish.commandblockerbungee.managers.ConfigManager;
 import com.wish.commandblockerbungee.managers.CooldownManager;
 import com.wish.commandblockerbungee.managers.WebhookManager;
+
 import net.kyori.adventure.platform.bungeecord.BungeeAudiences;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.plugin.Plugin;
-import org.bstats.bungeecord.Metrics;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class CommandBlockerBungee extends Plugin {
 
@@ -27,8 +29,12 @@ public class CommandBlockerBungee extends Plugin {
 
     @Override
     public void onEnable() {
-        // Initialize Thread Pool (Fixed size to prevent thread exhaustion)
-        this.executorService = Executors.newFixedThreadPool(16);
+        // Initialize config first to read thread pool size
+        this.configManager = new ConfigManager(this);
+        this.configManager.loadConfiguration();
+
+        // Initialize Thread Pool (configurable size to prevent thread exhaustion)
+        this.executorService = Executors.newFixedThreadPool(configManager.getThreadPoolSize());
 
         // Initialize Adventure
         this.adventure = BungeeAudiences.create(this);
@@ -46,10 +52,7 @@ public class CommandBlockerBungee extends Plugin {
                 ChatColor.AQUA + "                                                          by wwishhdev\n"
         ));
 
-        // Managers
-        this.configManager = new ConfigManager(this);
-        this.configManager.loadConfiguration();
-        
+
         this.databaseManager = new DatabaseManager(this, configManager, executorService);
         this.databaseManager.init();
         

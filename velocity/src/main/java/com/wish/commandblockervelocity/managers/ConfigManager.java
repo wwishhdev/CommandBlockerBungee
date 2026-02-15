@@ -256,6 +256,11 @@ public class ConfigManager {
         return Math.max(1000, Math.min(timeout, 120000));
     }
 
+    public int getThreadPoolSize() {
+        int size = getInt(4, "database", "thread-pool-size");
+        return Math.max(1, Math.min(size, 32));
+    }
+
     // ========================================================================
     // Discord Webhook
     // ========================================================================
