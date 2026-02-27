@@ -13,6 +13,7 @@ import com.wish.commandblockerbungee.listeners.ConnectionListener;
 import com.wish.commandblockerbungee.managers.ConfigManager;
 import com.wish.commandblockerbungee.managers.CooldownManager;
 import com.wish.commandblockerbungee.managers.WebhookManager;
+import com.wish.commandblockerbungee.utils.FileLogger;
 
 import net.kyori.adventure.platform.bungeecord.BungeeAudiences;
 import net.md_5.bungee.api.ChatColor;
@@ -26,6 +27,7 @@ public class CommandBlockerBungee extends Plugin {
     private WebhookManager webhookManager;
     private BungeeAudiences adventure;
     private ExecutorService executorService;
+    private FileLogger fileLogger;
 
     @Override
     public void onEnable() {
@@ -48,7 +50,7 @@ public class CommandBlockerBungee extends Plugin {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                ChatColor.YELLOW + "                CommandBlockerBungee v2.1.3 " + ChatColor.RED + "❤\n" +
+                ChatColor.YELLOW + "                CommandBlockerBungee v2.2.0 " + ChatColor.RED + "❤\n" +
                 ChatColor.AQUA + "                                                          by wwishhdev\n"
         ));
 
@@ -60,8 +62,10 @@ public class CommandBlockerBungee extends Plugin {
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
+        this.fileLogger = new FileLogger(getDataFolder(), executorService, getLogger());
+
         // Listeners & Commands
-        getProxy().getPluginManager().registerListener(this, new ChatListener(this, configManager, cooldownManager, webhookManager));
+        getProxy().getPluginManager().registerListener(this, new ChatListener(this, configManager, cooldownManager, webhookManager, fileLogger));
         getProxy().getPluginManager().registerListener(this, new ConnectionListener(cooldownManager));
         getProxy().getPluginManager().registerCommand(this, new ReloadCommand(this));
 

@@ -24,11 +24,12 @@ import com.wish.commandblockervelocity.listeners.ConnectionListener;
 import com.wish.commandblockervelocity.managers.ConfigManager;
 import com.wish.commandblockervelocity.managers.CooldownManager;
 import com.wish.commandblockervelocity.managers.WebhookManager;
+import com.wish.commandblockervelocity.utils.FileLogger;
 
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
-        version = "2.1.3",
+        version = "2.2.0",
         description = "A plugin to block commands in Velocity",
         authors = {"wwishhdev"}
 )
@@ -44,6 +45,7 @@ public class CommandBlockerVelocity {
     private CooldownManager cooldownManager;
     private DatabaseManager databaseManager;
     private WebhookManager webhookManager;
+    private FileLogger fileLogger;
 
     @Inject
     public CommandBlockerVelocity(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) {
@@ -71,7 +73,7 @@ public class CommandBlockerVelocity {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                "                CommandBlockerVelocity v2.1.3 \u2764\n" +
+                "                CommandBlockerVelocity v2.2.0 \u2764\n" +
                 "                                                          by wwishhdev\n");
 
         // Managers
@@ -82,8 +84,10 @@ public class CommandBlockerVelocity {
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
+        this.fileLogger = new FileLogger(dataDirectory, executorService, logger);
+
         // Listeners
-        proxy.getEventManager().register(this, new ChatListener(this, configManager, cooldownManager, webhookManager));
+        proxy.getEventManager().register(this, new ChatListener(this, configManager, cooldownManager, webhookManager, fileLogger));
         proxy.getEventManager().register(this, new ConnectionListener(cooldownManager));
 
         // Commands

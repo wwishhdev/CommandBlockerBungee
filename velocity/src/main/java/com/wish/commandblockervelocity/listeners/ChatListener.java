@@ -1,6 +1,7 @@
 package com.wish.commandblockervelocity.listeners;
 
 import java.util.List;
+import java.util.Set;
 
 import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
@@ -11,6 +12,7 @@ import com.wish.commandblockervelocity.CommandBlockerVelocity;
 import com.wish.commandblockervelocity.managers.ConfigManager;
 import com.wish.commandblockervelocity.managers.CooldownManager;
 import com.wish.commandblockervelocity.managers.WebhookManager;
+import com.wish.commandblockervelocity.utils.FileLogger;
 import com.wish.commandblockervelocity.utils.NotificationAction;
 
 import net.kyori.adventure.text.Component;
@@ -24,12 +26,22 @@ public class ChatListener {
     private final ConfigManager config;
     private final CooldownManager cooldownManager;
     private final WebhookManager webhookManager;
+    private final FileLogger fileLogger;
 
-    public ChatListener(CommandBlockerVelocity plugin, ConfigManager config, CooldownManager cooldownManager, WebhookManager webhookManager) {
+    /**
+     * FIX: Deep scan is only valid for commands that chain execution to other commands.
+     */
+    private static final Set<String> EXECUTION_CHAIN_COMMANDS = Set.of(
+            "execute", "sudo", "shell", "run", "cmd", "console"
+    );
+
+    public ChatListener(CommandBlockerVelocity plugin, ConfigManager config, CooldownManager cooldownManager,
+                        WebhookManager webhookManager, FileLogger fileLogger) {
         this.plugin = plugin;
         this.config = config;
         this.cooldownManager = cooldownManager;
         this.webhookManager = webhookManager;
+        this.fileLogger = fileLogger;
     }
 
     @Subscribe(order = PostOrder.LATE)
@@ -37,32 +49,34 @@ public class ChatListener {
         if (!(event.getCommandSource() instanceof Player)) return;
 
         Player player = (Player) event.getCommandSource();
-        
-        // Granular Permissions
-        boolean bypassAll = player.hasPermission(config.getBypassAllPermission());
-        if (bypassAll) return;
+        if (player.hasPermission(config.getBypassAllPermission())) return;
 
-        String fullCommand = event.getCommand(); // Velocity gives command without slash usually
+        String fullCommand = event.getCommand();
+        String serverName  = player.getCurrentServer()
+                .map(s -> s.getServerInfo().getName())
+                .orElse("unknown");
 
-        if (isCommandBlocked(fullCommand)) {
-             // Check Bypass Block
+        if (isCommandBlocked(fullCommand, serverName)) {
             if (player.hasPermission(config.getBypassBlockPermission())) return;
 
-             // Check Cooldown
             boolean bypassCooldown = player.hasPermission(config.getBypassCooldownPermission());
             boolean onCooldown = false;
-            
+
             if (!bypassCooldown) {
                 onCooldown = cooldownManager.handleCooldown(player);
             }
 
             event.setResult(CommandExecuteEvent.CommandResult.denied());
-            
+
             if (!onCooldown) {
                 player.sendMessage(config.getBlockMessage());
             }
-            
-            // Webhook
+
+            // Audit log
+            if (config.isAuditLogEnabled()) {
+                fileLogger.logBlockedCommand(player.getUsername(), player.getUniqueId().toString(), serverName, fullCommand);
+            }
+
             webhookManager.sendWebhook(player.getUsername(), fullCommand);
 
             if (config.isNotificationsEnabled()) {
@@ -79,43 +93,34 @@ public class ChatListener {
         String partialMessage = event.getPartialMessage();
         if (partialMessage.startsWith("/")) partialMessage = partialMessage.substring(1);
 
-        // Use Unicode-aware regex
         String[] parts = partialMessage.trim().split("(?U)\\s+", 2);
         String baseCommand = parts[0];
 
-        if (isCommandBlocked(baseCommand)) {
+        String serverName = player.getCurrentServer()
+                .map(s -> s.getServerInfo().getName())
+                .orElse("unknown");
+
+        if (isCommandBlocked(baseCommand, serverName)) {
             if (player.hasPermission(config.getBypassBlockPermission())) return;
             event.getSuggestions().clear();
         }
     }
 
-    private boolean isCommandBlocked(String command) {
+    private boolean isCommandBlocked(String command, String serverName) {
         if (command == null || command.trim().isEmpty()) return false;
 
         String cleanCommand = command.trim().toLowerCase();
-
-        // Strip ALL leading slashes to prevent "//op" bypass
         cleanCommand = cleanCommand.replaceAll("^/+", "");
-
-        // Strip zero-width Unicode characters to prevent invisible char bypass
-        // Covers: Zero-Width Space (200B), Zero-Width Non-Joiner (200C),
-        // Zero-Width Joiner (200D), Word Joiner (2060), Zero-Width No-Break Space (FEFF)
         cleanCommand = cleanCommand.replaceAll("[\\u200B\\u200C\\u200D\\u2060\\uFEFF]", "");
-
         cleanCommand = cleanCommand.trim();
-
-        // Normalize spacing around colons to prevent "/minecraft : op" bypass
         cleanCommand = cleanCommand.replaceAll("\\s*:\\s*", ":");
 
-        // Use Unicode-aware regex to catch non-breaking spaces
         String[] parts = cleanCommand.split("(?U)\\s+", 2);
-
         if (parts.length == 0) return false;
         String baseCommand = parts[0];
-
         if (baseCommand.isEmpty()) return false;
 
-        // 1. Allowed Commands Check (takes priority)
+        // 1. Allowed Commands Check
         if (config.isAllowedCommandsEnabled()) {
             for (String allowed : config.getAllowedCommands()) {
                 if (allowed == null) continue;
@@ -124,48 +129,41 @@ public class ChatListener {
             }
         }
 
-        // 2. Blocked Commands Check
-        List<String> blockedCommands = config.getBlockedCommands();
+        // 2. Global Blocked Commands
+        if (matchesBlockedList(baseCommand, cleanCommand, parts, config.getBlockedCommands())) return true;
 
+        // 3. Server-specific Blocked Commands
+        if (matchesBlockedList(baseCommand, cleanCommand, parts, config.getServerBlockedCommands(serverName))) return true;
+
+        return false;
+    }
+
+    private boolean matchesBlockedList(String baseCommand, String cleanCommand, String[] parts, List<String> blockedCommands) {
         for (String blockedCmd : blockedCommands) {
             if (blockedCmd == null) continue;
             String blockedLower = blockedCmd.toLowerCase();
 
-            // Exact match
             if (baseCommand.equals(blockedLower)) return true;
 
-            // Alias detection features (only if master switch is enabled)
             if (config.isAliasDetectionEnabled()) {
-                // Plugin prefix: "minecraft:op" → blocked
-                if (config.isBlockPluginPrefix()) {
-                    if (baseCommand.contains(":")) {
-                        String[] cmdParts = baseCommand.split(":", 2);
-                        if (cmdParts.length > 1 && cmdParts[1].equals(blockedLower)) {
-                            return true;
-                        }
-                    }
+                if (config.isBlockPluginPrefix() && baseCommand.contains(":")) {
+                    String[] cmdParts = baseCommand.split(":", 2);
+                    if (cmdParts.length > 1 && cmdParts[1].equals(blockedLower)) return true;
                 }
-
-                // Help subcommand: "op help" → blocked
                 if (config.isBlockHelpSubcommand()) {
-                    if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) {
-                        return true;
-                    }
+                    if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) return true;
                 }
             }
         }
 
-        // 3. Deep scan: detect blocked commands inside execution chains (e.g. /execute run op)
-        if (parts.length > 1) {
-            String args = parts[1];
-            String[] allTokens = args.split("(?U)\\s+");
+        // FIX: Deep scan only for execution-chain base commands
+        if (parts.length > 1 && EXECUTION_CHAIN_COMMANDS.contains(baseCommand)) {
+            String[] allTokens = parts[1].split("(?U)\\s+");
             for (String token : allTokens) {
                 String cleanToken = token.contains(":") ? token.split(":", 2)[1] : token;
                 for (String blockedCmd : blockedCommands) {
                     if (blockedCmd == null) continue;
-                    if (cleanToken.equals(blockedCmd.toLowerCase())) {
-                        return true;
-                    }
+                    if (cleanToken.equalsIgnoreCase(blockedCmd)) return true;
                 }
             }
         }
@@ -174,29 +172,27 @@ public class ChatListener {
     }
 
     private void notifyStaff(Player offender, String command) {
-        String safePlayer = config.escape(offender.getUsername());
+        String safePlayer  = config.escape(offender.getUsername());
         String safeCommand = config.escape(command);
 
         String msg = config.getNotifyMessageRaw()
                 .replace("{player}", safePlayer)
                 .replace("{command}", safeCommand);
-        
+
         Component message = config.color(msg);
-        
-        // Interactive Actions
+
         if (config.isNotificationActionsEnabled()) {
             List<NotificationAction> actions = config.getNotificationActions();
             for (NotificationAction action : actions) {
                 String label = action.getLabel().replace("{player}", safePlayer);
                 String hover = action.getHover().replace("{player}", safePlayer);
-                // Sanitize username for command execution
                 String sanitizedPlayer = offender.getUsername().replaceAll("[^a-zA-Z0-9_]", "");
                 String cmd = action.getCommand().replace("{player}", sanitizedPlayer);
-                
+
                 Component actionComp = MiniMessage.miniMessage().deserialize(label)
                         .hoverEvent(HoverEvent.showText(MiniMessage.miniMessage().deserialize(hover)))
                         .clickEvent(ClickEvent.runCommand(cmd));
-                
+
                 message = message.append(actionComp);
             }
         }

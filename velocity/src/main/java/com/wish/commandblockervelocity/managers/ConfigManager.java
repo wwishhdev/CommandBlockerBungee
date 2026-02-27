@@ -6,7 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.spongepowered.configurate.ConfigurationNode;
@@ -26,8 +28,8 @@ public class ConfigManager {
     private ConfigurationNode rootNode;
     private final MiniMessage miniMessage;
     
-    // Pre-compile the regex pattern for performance
-    private static final Pattern MINIMESSAGE_PATTERN = Pattern.compile(".*<[#a-zA-Z0-9_]+(:.+?)?>.*");
+    // Pre-compile the regex pattern for performance (DOTALL so '.' matches newlines too)
+    private static final Pattern MINIMESSAGE_PATTERN = Pattern.compile(".*<[#a-zA-Z0-9_]+(:.+?)?>.*", Pattern.DOTALL);
 
     public ConfigManager(CommandBlockerVelocity plugin, Path dataDirectory) {
         this.plugin = plugin;
@@ -57,11 +59,44 @@ public class ConfigManager {
                     .path(configPath)
                     .build();
             rootNode = loader.load();
-            
+            validateConfiguration();
         } catch (IOException e) {
             plugin.getLogger().error("Error loading configuration file: " + e.getMessage());
         } catch (Exception e) {
             plugin.getLogger().error("Unexpected error loading configuration: " + e.getMessage());
+        }
+    }
+
+    /**
+     * NEW: Validates config values on load and warns about invalid/inconsistent settings.
+     */
+    public void validateConfiguration() {
+        if (getMaxAttempts() <= 0) {
+            plugin.getLogger().warn("[Config] cooldown.max-attempts must be > 0. Got: " + getMaxAttempts() + ".");
+        }
+        if (getTimeoutDuration() <= 0) {
+            plugin.getLogger().warn("[Config] cooldown.timeout-duration must be > 0. Got: " + getTimeoutDuration() + ".");
+        }
+        if (getResetAfter() <= 0) {
+            plugin.getLogger().warn("[Config] cooldown.reset-after must be > 0. Got: " + getResetAfter() + ".");
+        }
+        if (getResetAfter() <= getTimeoutDuration()) {
+            plugin.getLogger().warn("[Config] cooldown.reset-after (" + getResetAfter() + "s) should be greater than " +
+                    "cooldown.timeout-duration (" + getTimeoutDuration() + "s) to avoid immediately resetting timeouts.");
+        }
+        if (isWebhookEnabled() && getWebhookUrl().isEmpty()) {
+            plugin.getLogger().warn("[Config] discord-webhook is enabled but no URL is set.");
+        }
+        if (isDatabaseEnabled() && getDatabaseType().equalsIgnoreCase("mysql")) {
+            if (getDatabaseHost().isEmpty()) {
+                plugin.getLogger().warn("[Config] database.host is empty. MySQL will likely fail to connect.");
+            }
+            if (getDatabasePassword().isEmpty()) {
+                plugin.getLogger().warn("[Config] database.password is empty. This is insecure for MySQL.");
+            }
+        }
+        if (getBlockedCommands().isEmpty()) {
+            plugin.getLogger().warn("[Config] blocked-commands list is empty. No commands will be blocked.");
         }
     }
 
@@ -119,6 +154,40 @@ public class ConfigManager {
 
     public List<String> getAllowedCommands() {
         return getStringList("allowed-commands-settings", "commands");
+    }
+
+    // ========================================================================
+    // Server-specific Blocked Commands
+    // ========================================================================
+
+    /**
+     * NEW: Returns commands blocked only on a specific server.
+     * Returns an empty list if no server-specific rules exist for that server.
+     */
+    public List<String> getServerBlockedCommands(String serverName) {
+        if (serverName == null || serverName.isEmpty()) return Collections.emptyList();
+        try {
+            return rootNode.node("server-blocked-commands", serverName.toLowerCase()).getList(String.class, Collections.emptyList());
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Returns all server-specific blocked command mappings as a map.
+     */
+    public Map<String, List<String>> getAllServerBlockedCommands() {
+        Map<String, List<String>> result = new HashMap<>();
+        try {
+            rootNode.node("server-blocked-commands").childrenMap().forEach((key, node) -> {
+                try {
+                    result.put(key.toString(), node.getList(String.class, Collections.emptyList()));
+                } catch (Exception ignored) {}
+            });
+        } catch (Exception e) {
+            plugin.getLogger().error("Error reading server-blocked-commands: " + e.getMessage());
+        }
+        return result;
     }
 
     // Cooldown
@@ -312,6 +381,19 @@ public class ConfigManager {
             plugin.getLogger().error("Error loading notification actions: " + e.getMessage());
         }
         return actions;
+    }
+
+    // ========================================================================
+    // Audit Log
+    // ========================================================================
+
+    public boolean isAuditLogEnabled() {
+        return getBoolean(false, "audit-log", "enabled");
+    }
+
+    public int getAuditLogMaxFiles() {
+        int max = getInt(30, "audit-log", "max-files");
+        return Math.max(1, Math.min(max, 365));
     }
 
     // ========================================================================

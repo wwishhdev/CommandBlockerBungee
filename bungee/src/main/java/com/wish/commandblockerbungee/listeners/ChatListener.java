@@ -1,11 +1,13 @@
 package com.wish.commandblockerbungee.listeners;
 
 import java.util.List;
+import java.util.Set;
 
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import com.wish.commandblockerbungee.managers.ConfigManager;
 import com.wish.commandblockerbungee.managers.CooldownManager;
 import com.wish.commandblockerbungee.managers.WebhookManager;
+import com.wish.commandblockerbungee.utils.FileLogger;
 import com.wish.commandblockerbungee.utils.NotificationAction;
 
 import net.kyori.adventure.text.Component;
@@ -25,12 +27,24 @@ public class ChatListener implements Listener {
     private final ConfigManager config;
     private final CooldownManager cooldownManager;
     private final WebhookManager webhookManager;
+    private final FileLogger fileLogger;
 
-    public ChatListener(CommandBlockerBungee plugin, ConfigManager config, CooldownManager cooldownManager, WebhookManager webhookManager) {
+    /**
+     * FIX: Commands that legitimately accept sub-commands to execute other commands.
+     * The deep-scan (argument scanning) is only meaningful for these "execution chain" commands.
+     * Applying it globally caused false positives (e.g. /tell player op being blocked).
+     */
+    private static final Set<String> EXECUTION_CHAIN_COMMANDS = Set.of(
+            "execute", "sudo", "shell", "run", "cmd", "console"
+    );
+
+    public ChatListener(CommandBlockerBungee plugin, ConfigManager config, CooldownManager cooldownManager,
+                        WebhookManager webhookManager, FileLogger fileLogger) {
         this.plugin = plugin;
         this.config = config;
         this.cooldownManager = cooldownManager;
         this.webhookManager = webhookManager;
+        this.fileLogger = fileLogger;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -39,38 +53,36 @@ public class ChatListener implements Listener {
         if (!(event.getSender() instanceof ProxiedPlayer)) return;
 
         ProxiedPlayer player = (ProxiedPlayer) event.getSender();
-        
+
         // Granular Permissions
-        boolean bypassAll = player.hasPermission(config.getBypassAllPermission());
-        if (bypassAll) return;
+        if (player.hasPermission(config.getBypassAllPermission())) return;
 
         String fullCommand = event.getMessage();
+        String serverName  = player.getServer() != null ? player.getServer().getInfo().getName() : "unknown";
 
-        if (isCommandBlocked(fullCommand)) {
-            // Check Bypass Block
+        if (isCommandBlocked(fullCommand, serverName)) {
             if (player.hasPermission(config.getBypassBlockPermission())) return;
 
-            // Check Cooldown (if not bypassed)
             boolean bypassCooldown = player.hasPermission(config.getBypassCooldownPermission());
             boolean onCooldown = false;
-            
+
             if (!bypassCooldown) {
-                // handleCooldown returns true if they are currently timed out OR just got timed out
                 onCooldown = cooldownManager.handleCooldown(player);
             }
 
             event.setCancelled(true);
-            
-            // Only send block message if NOT on cooldown (cooldown manager sends its own message)
-            // OR if you want both messages. Usually, if timed out, you get the timeout message.
+
             if (!onCooldown) {
                 plugin.adventure().player(player).sendMessage(config.getBlockMessage());
             }
-            
-            // Webhook - Always send (Managers queues it)
+
+            // Audit log
+            if (config.isAuditLogEnabled()) {
+                fileLogger.logBlockedCommand(player.getName(), player.getUniqueId().toString(), serverName, fullCommand);
+            }
+
             webhookManager.sendWebhook(player.getName(), fullCommand);
 
-            // Notify Staff - Always notify (or filtered by settings)
             if (config.isNotificationsEnabled()) {
                 notifyStaff(player, fullCommand);
             }
@@ -86,20 +98,20 @@ public class ChatListener implements Listener {
 
         String cursor = event.getCursor().toLowerCase();
         if (cursor.startsWith("/")) cursor = cursor.substring(1);
-        
-        // Fix: Properly handle spacing in tab complete (Unicode-aware Regex split)
-        // (?U) enables UNICODE_CHARACTER_CLASS mode
+
         String[] parts = cursor.trim().split("(?U)\\s+", 2);
         String base = parts[0];
-        
-        if (isCommandBlocked(base)) {
+
+        String serverName = player.getServer() != null ? player.getServer().getInfo().getName() : "unknown";
+
+        if (isCommandBlocked(base, serverName)) {
             if (player.hasPermission(config.getBypassBlockPermission())) return;
             event.setCancelled(true);
             event.getSuggestions().clear();
         }
     }
 
-    private boolean isCommandBlocked(String command) {
+    private boolean isCommandBlocked(String command, String serverName) {
         if (command == null || command.trim().isEmpty()) return false;
 
         String cleanCommand = command.trim().toLowerCase();
@@ -108,22 +120,20 @@ public class ChatListener implements Listener {
         cleanCommand = cleanCommand.replaceAll("^/+", "");
 
         // Strip zero-width Unicode characters to prevent invisible char bypass
-        // Covers: Zero-Width Space (200B), Zero-Width Non-Joiner (200C),
-        // Zero-Width Joiner (200D), Word Joiner (2060), Zero-Width No-Break Space (FEFF)
         cleanCommand = cleanCommand.replaceAll("[\\u200B\\u200C\\u200D\\u2060\\uFEFF]", "");
+
+        cleanCommand = cleanCommand.trim();
 
         // Normalize spacing around colons to prevent "/minecraft : op" bypass
         cleanCommand = cleanCommand.replaceAll("\\s*:\\s*", ":");
 
         // Use Unicode-aware regex to catch non-breaking spaces
         String[] parts = cleanCommand.split("(?U)\\s+", 2);
-
         if (parts.length == 0) return false;
         String baseCommand = parts[0];
-
         if (baseCommand.isEmpty()) return false;
 
-        // 1. Allowed Commands Check (takes priority)
+        // 1. Allowed Commands Check (takes priority over all blocked lists)
         if (config.isAllowedCommandsEnabled()) {
             for (String allowed : config.getAllowedCommands()) {
                 if (allowed == null) continue;
@@ -132,49 +142,51 @@ public class ChatListener implements Listener {
             }
         }
 
-        // 2. Blocked Commands Check
+        // 2. Global Blocked Commands Check
         List<String> blockedCommands = config.getBlockedCommands();
+        if (matchesBlockedList(baseCommand, cleanCommand, parts, blockedCommands)) return true;
 
+        // 3. Server-specific Blocked Commands Check
+        if (matchesBlockedList(baseCommand, cleanCommand, parts, config.getServerBlockedCommands(serverName))) return true;
+
+        return false;
+    }
+
+    /**
+     * Core matching logic shared between global and server-specific blocked lists.
+     */
+    private boolean matchesBlockedList(String baseCommand, String cleanCommand, String[] parts, List<String> blockedCommands) {
         for (String blockedCmd : blockedCommands) {
             if (blockedCmd == null) continue;
             String blockedLower = blockedCmd.toLowerCase();
 
-            // Exact match: "op" == "op"
+            // Exact match
             if (baseCommand.equals(blockedLower)) return true;
 
-            // Alias detection features (only if master switch is enabled)
             if (config.isAliasDetectionEnabled()) {
                 // Plugin prefix: "minecraft:op" → blocked
-                if (config.isBlockPluginPrefix()) {
-                    if (baseCommand.contains(":")) {
-                        String[] cmdParts = baseCommand.split(":", 2);
-                        if (cmdParts.length > 1 && cmdParts[1].equals(blockedLower)) {
-                            return true;
-                        }
-                    }
+                if (config.isBlockPluginPrefix() && baseCommand.contains(":")) {
+                    String[] cmdParts = baseCommand.split(":", 2);
+                    if (cmdParts.length > 1 && cmdParts[1].equals(blockedLower)) return true;
                 }
 
                 // Help subcommand: "op help" → blocked
                 if (config.isBlockHelpSubcommand()) {
-                    if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) {
-                        return true;
-                    }
+                    if (cleanCommand.equals(blockedLower + " help") || cleanCommand.startsWith(blockedLower + " help ")) return true;
                 }
             }
         }
 
-        // 3. Deep scan: detect blocked commands inside execution chains (e.g. /execute run op)
-        if (parts.length > 1) {
-            String args = parts[1];
-            String[] allTokens = args.split("(?U)\\s+");
+        // FIX: Deep scan — only scan arguments when the BASE command is a known
+        // execution-chain command (e.g. /execute, /sudo). This prevents false positives
+        // like /tell player op being caught because "op" appears as an argument.
+        if (parts.length > 1 && EXECUTION_CHAIN_COMMANDS.contains(baseCommand)) {
+            String[] allTokens = parts[1].split("(?U)\\s+");
             for (String token : allTokens) {
-                // Strip plugin prefix from token if present
                 String cleanToken = token.contains(":") ? token.split(":", 2)[1] : token;
                 for (String blockedCmd : blockedCommands) {
                     if (blockedCmd == null) continue;
-                    if (cleanToken.equals(blockedCmd.toLowerCase())) {
-                        return true;
-                    }
+                    if (cleanToken.equalsIgnoreCase(blockedCmd)) return true;
                 }
             }
         }
@@ -183,29 +195,27 @@ public class ChatListener implements Listener {
     }
 
     private void notifyStaff(ProxiedPlayer offender, String command) {
-        String safePlayer = config.escape(offender.getName());
+        String safePlayer  = config.escape(offender.getName());
         String safeCommand = config.escape(command);
-        
+
         String msgRaw = config.getNotifyMessageRaw()
                 .replace("{player}", safePlayer)
                 .replace("{command}", safeCommand);
-        
+
         Component message = config.parse(msgRaw);
-        
-        // Interactive Actions
+
         if (config.isNotificationActionsEnabled()) {
             List<NotificationAction> actions = config.getNotificationActions();
             for (NotificationAction action : actions) {
                 String label = action.getLabel().replace("{player}", safePlayer);
                 String hover = action.getHover().replace("{player}", safePlayer);
-                // Sanitize username for command execution to prevent injection
                 String sanitizedPlayer = offender.getName().replaceAll("[^a-zA-Z0-9_]", "");
-                String cmd = action.getCommand().replace("{player}", sanitizedPlayer); 
-                
+                String cmd = action.getCommand().replace("{player}", sanitizedPlayer);
+
                 Component actionComp = MiniMessage.miniMessage().deserialize(label)
                         .hoverEvent(HoverEvent.showText(MiniMessage.miniMessage().deserialize(hover)))
                         .clickEvent(ClickEvent.runCommand(cmd));
-                
+
                 message = message.append(actionComp);
             }
         }

@@ -7,7 +7,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -24,8 +23,12 @@ public class WebhookManager {
     private final ExecutorService executor;
     private final Queue<WebhookRequest> queue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger queueSize = new AtomicInteger(0);
+    // Stores last-sent timestamp per player for rate-limiting
     private final Map<String, Long> playerLastWebhook = new ConcurrentHashMap<>();
     private static final int MAX_QUEUE_SIZE = 100;
+    // How long (ms) a player entry stays in the rate-limit map after it expires.
+    // Evict entries that are older than 2x the configured rate-limit window.
+    private static final long EVICTION_MULTIPLIER = 2;
 
     public WebhookManager(CommandBlockerBungee plugin, ConfigManager config, ExecutorService executor) {
         this.plugin = plugin;
@@ -35,9 +38,11 @@ public class WebhookManager {
                 .version(HttpClient.Version.HTTP_2)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
-        
-        // Rate limit processor (Process max 4 webhooks per second)
+
+        // Process up to 4 queued webhooks per second
         plugin.getProxy().getScheduler().schedule(plugin, this::processQueue, 1, 1, TimeUnit.SECONDS);
+        // FIX: Evict stale rate-limit entries every minute to prevent unbounded map growth
+        plugin.getProxy().getScheduler().schedule(plugin, this::evictStaleEntries, 60, 60, TimeUnit.SECONDS);
     }
 
     public void sendWebhook(String playerName, String command) {
@@ -49,7 +54,7 @@ public class WebhookManager {
             plugin.getLogger().warning("Discord webhook URL is not a valid Discord webhook. Skipping.");
             return;
         }
-        
+
         if (queueSize.get() >= MAX_QUEUE_SIZE) {
             return;
         }
@@ -74,18 +79,33 @@ public class WebhookManager {
             WebhookRequest req = queue.poll();
             if (req == null) break;
             queueSize.decrementAndGet();
-            
-            // Sanitize markdown in player name and command
+
+            // Sanitize Discord markdown in player name and command
             String safePlayer = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
             String safeCommand = req.command.replaceAll("([_`*~|])", "\\\\$1");
-            send(safePlayer, safeCommand);
+            send(safePlayer, safeCommand, 0);
         }
     }
 
-    private void send(String playerName, String command) {
-        CompletableFuture.runAsync(() -> {
+    /**
+     * FIX: Remove playerLastWebhook map entries that are older than 2× the rate-limit
+     * window. These entries serve no purpose once expired and would otherwise accumulate
+     * indefinitely for every player that ever triggered a block.
+     */
+    private void evictStaleEntries() {
+        long now = System.currentTimeMillis();
+        long evictAfterMs = config.getWebhookRateLimit() * 1000L * EVICTION_MULTIPLIER;
+        playerLastWebhook.entrySet().removeIf(entry -> (now - entry.getValue()) > evictAfterMs);
+    }
+
+    /**
+     * NEW: Send with exponential-backoff retry on HTTP 429 (rate limited) or 5xx errors.
+     * Max 3 attempts: immediate → 2 s → 4 s.
+     */
+    private void send(String playerName, String command, int attempt) {
+        executor.execute(() -> {
             try {
-                // Redact sensitive commands (handle with and without leading slash)
+                // Redact sensitive commands
                 String processedCommand = command;
                 String lowerCmd = command.toLowerCase().replaceAll("^/+", "");
                 if (lowerCmd.startsWith("login") || lowerCmd.startsWith("register") || lowerCmd.startsWith("changepassword")
@@ -100,13 +120,11 @@ public class WebhookManager {
                 String content = config.getWebhookContent()
                         .replace("{player}", playerName)
                         .replace("{command}", processedCommand);
-                
-                // Escape JSON strings manually to avoid dependency
-                String jsonContent = escapeJson(content);
-                String jsonUsername = escapeJson(config.getWebhookUsername());
-                String jsonAvatar = escapeJson(config.getWebhookAvatarUrl());
 
-                // Use concatenation instead of String.format to avoid issues with % characters
+                String jsonContent  = escapeJson(content);
+                String jsonUsername = escapeJson(config.getWebhookUsername());
+                String jsonAvatar   = escapeJson(config.getWebhookAvatarUrl());
+
                 String jsonPayload = "{\"username\": \"" + jsonUsername + "\", \"avatar_url\": \"" + jsonAvatar + "\", \"content\": \"" + jsonContent + "\"}";
 
                 HttpRequest request = HttpRequest.newBuilder()
@@ -116,11 +134,21 @@ public class WebhookManager {
                         .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                         .build();
 
-                httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+                HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+                int status = response.statusCode();
+
+                if ((status == 429 || (status >= 500 && status < 600)) && attempt < 2) {
+                    // Exponential backoff: 2^attempt seconds (2 s, 4 s)
+                    long delaySeconds = (long) Math.pow(2, attempt + 1);
+                    plugin.getLogger().warning("Discord webhook returned " + status + ". Retrying in " + delaySeconds + "s (attempt " + (attempt + 1) + "/3).");
+                    plugin.getProxy().getScheduler().schedule(plugin, () -> send(playerName, command, attempt + 1), delaySeconds, TimeUnit.SECONDS);
+                } else if (status < 200 || status >= 300) {
+                    plugin.getLogger().warning("Discord webhook returned non-2xx status: " + status + " (all retries exhausted).");
+                }
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to send Discord webhook: " + e.getMessage());
             }
-        }, executor);
+        });
     }
 
     private static class WebhookRequest {
@@ -139,27 +167,13 @@ public class WebhookManager {
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
             switch (c) {
-                case '"':
-                    sb.append("\\\"");
-                    break;
-                case '\\':
-                    sb.append("\\\\");
-                    break;
-                case '\b':
-                    sb.append("\\b");
-                    break;
-                case '\f':
-                    sb.append("\\f");
-                    break;
-                case '\n':
-                    sb.append("\\n");
-                    break;
-                case '\r':
-                    sb.append("\\r");
-                    break;
-                case '\t':
-                    sb.append("\\t");
-                    break;
+                case '"':  sb.append("\\\""); break;
+                case '\\': sb.append("\\\\"); break;
+                case '\b': sb.append("\\b");  break;
+                case '\f': sb.append("\\f");  break;
+                case '\n': sb.append("\\n");  break;
+                case '\r': sb.append("\\r");  break;
+                case '\t': sb.append("\\t");  break;
                 default:
                     if (c < ' ') {
                         String t = "000" + Integer.toHexString(c);

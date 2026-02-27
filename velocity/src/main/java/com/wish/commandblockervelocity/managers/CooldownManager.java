@@ -31,26 +31,23 @@ public class CooldownManager {
         if (!configManager.isDatabaseEnabled()) return;
 
         databaseManager.loadCooldown(uuid).thenAccept(data -> {
-            if (data != null) {
-                playerAttempts.compute(uuid, (key, current) -> {
-                    if (current == null) {
-                         CommandAttempts attempts = new CommandAttempts();
-                        synchronized (attempts) {
-                            attempts.attempts = data.attempts;
-                            attempts.lastAttempt = data.lastAttempt;
-                            attempts.timeoutUntil = data.timeoutUntil;
-                        }
-                        return attempts;
-                    } else {
-                        synchronized (current) {
-                            if (System.currentTimeMillis() < data.timeoutUntil) {
-                                current.timeoutUntil = data.timeoutUntil;
-                            }
-                            current.attempts = Math.max(current.attempts, data.attempts);
-                        }
-                        return current;
-                    }
-                });
+            if (data == null) return;
+
+            // FIX: Don't synchronize inside compute(). Use putIfAbsent + then operate on the
+            // canonical instance to avoid lock-ordering deadlocks between the CHM segment
+            // lock and the CommandAttempts monitor.
+            CommandAttempts fresh = new CommandAttempts();
+            CommandAttempts existing = playerAttempts.putIfAbsent(uuid, fresh);
+            CommandAttempts canonical = (existing != null) ? existing : fresh;
+
+            synchronized (canonical) {
+                canonical.attempts = Math.max(canonical.attempts, data.attempts);
+                if (System.currentTimeMillis() < data.timeoutUntil) {
+                    canonical.timeoutUntil = data.timeoutUntil;
+                }
+                if (data.lastAttempt > canonical.lastAttempt) {
+                    canonical.lastAttempt = data.lastAttempt;
+                }
             }
         });
     }
@@ -70,7 +67,6 @@ public class CooldownManager {
 
             long timeSinceLastAttempt = (System.currentTimeMillis() - attempts.lastAttempt) / 1000;
 
-            // Reset if idle time passed OR if they served their timeout penalty
             if (timeSinceLastAttempt > configManager.getResetAfter()
                     || (attempts.timeoutUntil > 0 && System.currentTimeMillis() >= attempts.timeoutUntil)) {
                 attempts.resetAttempts();
@@ -79,7 +75,8 @@ public class CooldownManager {
 
             attempts.incrementAttempts();
 
-            if (attempts.attempts > configManager.getMaxAttempts()) {
+            // FIX: Use >= so the Nth attempt (exactly at max) triggers the timeout.
+            if (attempts.attempts >= configManager.getMaxAttempts()) {
                 attempts.setTimeout(configManager.getTimeoutDuration());
                 String timeLeft = String.valueOf(configManager.getTimeoutDuration());
 
@@ -106,7 +103,7 @@ public class CooldownManager {
 
     private void notifyStaff(String message) {
         if (!configManager.isNotificationsEnabled() || message == null) return;
-        
+
         plugin.getProxy().getAllPlayers().stream()
                 .filter(p -> p.hasPermission(configManager.getNotifyPermission()))
                 .forEach(p -> p.sendMessage(configManager.color(message)));
@@ -116,10 +113,11 @@ public class CooldownManager {
         long currentTime = System.currentTimeMillis();
         int resetAfter = configManager.getResetAfter();
         playerAttempts.entrySet().removeIf(entry -> {
-            boolean shouldRemove = (currentTime - entry.getValue().lastAttempt) / 1000 > resetAfter * 2;
-            if (shouldRemove && configManager.isDatabaseEnabled()) {
-                CommandAttempts a = entry.getValue();
-                synchronized (a) {
+            CommandAttempts a = entry.getValue();
+            boolean shouldRemove;
+            synchronized (a) {
+                shouldRemove = (currentTime - a.lastAttempt) / 1000 > resetAfter * 2L;
+                if (shouldRemove && configManager.isDatabaseEnabled()) {
                     databaseManager.saveCooldown(entry.getKey(), a.attempts, a.lastAttempt, a.timeoutUntil);
                 }
             }
@@ -127,7 +125,18 @@ public class CooldownManager {
         });
     }
 
+    /**
+     * FIX: Persist all in-memory cooldown data to DB before clearing,
+     * so that active timeouts survive reloads and shutdowns.
+     */
     public void clear() {
+        if (configManager.isDatabaseEnabled()) {
+            playerAttempts.forEach((uuid, attempts) -> {
+                synchronized (attempts) {
+                    databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+                }
+            });
+        }
         playerAttempts.clear();
     }
 
