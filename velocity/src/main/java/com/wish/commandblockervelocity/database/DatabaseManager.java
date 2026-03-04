@@ -75,15 +75,25 @@ public class DatabaseManager {
     }
 
     private void createTable() {
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement("CREATE TABLE IF NOT EXISTS " + tablePrefix + "cooldowns (" +
-                     "uuid VARCHAR(36) PRIMARY KEY, " +
-                     "attempts INT, " +
-                     "last_attempt BIGINT, " +
-                     "timeout_until BIGINT)")) {
-            ps.executeUpdate();
+        try (Connection conn = dataSource.getConnection()) {
+            try (PreparedStatement ps = conn.prepareStatement("CREATE TABLE IF NOT EXISTS " + tablePrefix + "cooldowns (" +
+                    "uuid VARCHAR(36) PRIMARY KEY, " +
+                    "attempts INT, " +
+                    "last_attempt BIGINT, " +
+                    "timeout_until BIGINT)")) {
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement("CREATE TABLE IF NOT EXISTS " + tablePrefix + "command_log (" +
+                    "id INTEGER PRIMARY KEY " + (useMySQL ? "AUTO_INCREMENT" : "AUTOINCREMENT") + ", " +
+                    "uuid VARCHAR(36), " +
+                    "player_name VARCHAR(16), " +
+                    "server VARCHAR(64), " +
+                    "command VARCHAR(256), " +
+                    "timestamp BIGINT)")) {
+                ps.executeUpdate();
+            }
         } catch (SQLException e) {
-            plugin.getLogger().error("Could not create database table: " + e.getMessage());
+            plugin.getLogger().error("Could not create database tables: " + e.getMessage());
         }
     }
 
@@ -130,6 +140,25 @@ public class DatabaseManager {
                 plugin.getLogger().error("Error loading cooldown data: " + e.getMessage());
             }
             return null;
+        }, executor);
+    }
+
+    public CompletableFuture<Void> logBlockedCommand(String uuid, String playerName, String server, String command) {
+        if (dataSource == null) return CompletableFuture.completedFuture(null);
+
+        return CompletableFuture.runAsync(() -> {
+            String sql = "INSERT INTO " + tablePrefix + "command_log (uuid, player_name, server, command, timestamp) VALUES (?, ?, ?, ?, ?)";
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, uuid);
+                ps.setString(2, playerName);
+                ps.setString(3, server);
+                ps.setString(4, command.length() > 256 ? command.substring(0, 256) : command);
+                ps.setLong(5, System.currentTimeMillis());
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                plugin.getLogger().error("Error logging blocked command to database: " + e.getMessage());
+            }
         }, executor);
     }
 

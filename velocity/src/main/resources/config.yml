@@ -4,13 +4,13 @@
 #| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |
 # \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|____/|_|\___/ \___|_|\_\___|_|
 #
-# CommandBlockerVelocity v2.2.0
+# CommandBlockerVelocity v2.3.0
 # Author: wwishhdev
 
 # =============================================================================
 # Messages Configuration
 # Supports MiniMessage (<red>, <gradient:red:blue>, <#ff0000>) and Legacy (&c)
-# Available placeholders: {player}, {command}, {time}, {error}
+# Available placeholders: {player}, {command}, {time}, {error}, {server}
 # =============================================================================
 messages:
   block-message: '<red>This command is blocked.'
@@ -45,6 +45,10 @@ alias-detection:
 # =============================================================================
 # Blocked Commands List
 # Add commands without the '/' prefix
+# Supports three formats:
+#   - Plain:    'op'                    (exact match)
+#   - Wildcard: 'wildcard:game*'        (glob pattern, * = any chars, ? = single char)
+#   - Regex:    'regex:game(mode)?.*'   (Java regex, case-insensitive)
 # =============================================================================
 blocked-commands:
   - 'op'
@@ -56,6 +60,22 @@ blocked-commands:
   - 'pl'
   # WARNING: 'execute' can be used to run blocked commands indirectly (e.g. /execute run op)
   - 'execute'
+  # Examples of pattern matching:
+  # - 'wildcard:game*'          # blocks gamemode, gm, gamemode1, etc.
+  # - 'regex:ban(ip|list)?'     # blocks ban, banip, banlist
+
+# =============================================================================
+# Per-Command Custom Messages
+# Override the block message for specific commands.
+# If a command is not listed here, the default block-message is used.
+# Supports MiniMessage and Legacy '&' color codes.
+# =============================================================================
+custom-messages:
+  enabled: false
+  commands:
+    # op: '<red>You are not allowed to use the OP command.'
+    # plugins: '<red>Plugin list is hidden on this server.'
+    # pl: '<red>Plugin list is hidden on this server.'
 
 # =============================================================================
 # Allowed Commands List
@@ -77,6 +97,20 @@ cooldown:
   timeout-duration: 300     # Seconds
   reset-after: 600         # Seconds
   timeout-message: '<red>You have exceeded the attempt limit. Wait <yellow>{time} <red>to try again.'
+
+# =============================================================================
+# Auto-Punishments
+# Automatically execute commands when a player exceeds attempt thresholds.
+# Thresholds are cumulative and reset with the cooldown system.
+# Available placeholders: {player}
+# =============================================================================
+auto-punishments:
+  enabled: false
+  actions:
+    # - threshold: 5
+    #   command: 'kick {player} Attempting to use blocked commands'
+    # - threshold: 10
+    #   command: 'ban {player} Repeated use of blocked commands'
 
 # =============================================================================
 # Database Configuration (SQLite or MySQL)
@@ -105,7 +139,8 @@ database:
 notifications:
   enabled: true
   notify-on-timeout: true
-  command-message: '<yellow>{player} <gray>tried to use blocked command: <red>{command}'
+  # Available placeholders: {player}, {command}, {server}
+  command-message: '<yellow>{player} <gray>tried to use blocked command: <red>{command} <dark_gray>(<gray>{server}<dark_gray>)'
   timeout-message: '<yellow>{player} <gray>has been timed out for exceeding attempts.'
 
 # =============================================================================
@@ -136,7 +171,8 @@ discord-webhook:
   url: ""
   username: "CommandBlocker"
   avatar-url: "https://i.imgur.com/example.png"
-  content: "**{player}** tried to use blocked command: `{command}`"
+  # Available placeholders: {player}, {command}, {server}, {uuid}, {timestamp}
+  content: "**{player}** tried to use blocked command: `{command}` on server `{server}`"
   rate-limit: 10            # Seconds between webhook messages per player (1-300)
   # Retry on Discord 429 (rate limited) or 5xx errors.
   # Max 3 total attempts with exponential backoff: immediate → 2s → 4s.
@@ -154,6 +190,21 @@ server-blocked-commands:
   #   - 'spawn'
   # hub:
   #   - 'warp'
+
+# =============================================================================
+# Tab-Complete Whitelist Mode
+# When enabled, ALL tab-complete suggestions are hidden EXCEPT for commands
+# in the allowed list. This is useful for hiding your server's plugin stack.
+# Note: Players with the bypass-all permission are not affected.
+# =============================================================================
+tab-complete-whitelist:
+  enabled: false
+  # Commands that will still show in tab-complete (without '/' prefix)
+  # allowed:
+  #   - 'help'
+  #   - 'msg'
+  #   - 'tell'
+  #   - 'ping'
 
 # =============================================================================
 # Audit Log

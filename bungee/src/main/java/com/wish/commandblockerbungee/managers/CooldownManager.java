@@ -1,5 +1,6 @@
 package com.wish.commandblockerbungee.managers;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -7,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import com.wish.commandblockerbungee.database.DatabaseManager;
+import com.wish.commandblockerbungee.utils.PunishmentAction;
 
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 
@@ -80,6 +82,11 @@ public class CooldownManager {
 
             attempts.incrementAttempts();
 
+            // Auto-punishments: execute commands when thresholds are reached
+            if (configManager.isAutoPunishmentsEnabled()) {
+                checkAutoPunishments(player, attempts.attempts);
+            }
+
             // FIX: Use >= so that the Nth attempt (exactly at max) triggers the timeout,
             // not the (N+1)th attempt.
             if (attempts.attempts >= configManager.getMaxAttempts()) {
@@ -96,6 +103,20 @@ public class CooldownManager {
         }
 
         return false;
+    }
+
+    private void checkAutoPunishments(ProxiedPlayer player, int currentAttempts) {
+        List<PunishmentAction> punishments = configManager.getAutoPunishments();
+        for (PunishmentAction action : punishments) {
+            if (currentAttempts == action.getThreshold()) {
+                String sanitizedPlayer = player.getName().replaceAll("[^a-zA-Z0-9_]", "");
+                String cmd = action.getCommand().replace("{player}", sanitizedPlayer);
+                plugin.getProxy().getPluginManager().dispatchCommand(
+                        plugin.getProxy().getConsole(), cmd
+                );
+                plugin.getLogger().info("Auto-punishment executed for " + player.getName() + ": " + cmd);
+            }
+        }
     }
 
     public void removeCooldown(UUID uuid) {

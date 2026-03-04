@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import org.bstats.bungeecord.Metrics;
 
 import com.wish.commandblockerbungee.commands.ReloadCommand;
+import com.wish.commandblockerbungee.commands.StatusCommand;
 import com.wish.commandblockerbungee.database.DatabaseManager;
 import com.wish.commandblockerbungee.listeners.ChatListener;
 import com.wish.commandblockerbungee.listeners.ConnectionListener;
@@ -50,7 +51,7 @@ public class CommandBlockerBungee extends Plugin {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                ChatColor.YELLOW + "                CommandBlockerBungee v2.2.0 " + ChatColor.RED + "❤\n" +
+                ChatColor.YELLOW + "                CommandBlockerBungee v2.3.0 " + ChatColor.RED + "❤\n" +
                 ChatColor.AQUA + "                                                          by wwishhdev\n"
         ));
 
@@ -62,12 +63,13 @@ public class CommandBlockerBungee extends Plugin {
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
-        this.fileLogger = new FileLogger(getDataFolder(), executorService, getLogger());
+        this.fileLogger = new FileLogger(getDataFolder(), executorService, getLogger(), configManager.getAuditLogMaxFiles());
 
         // Listeners & Commands
         getProxy().getPluginManager().registerListener(this, new ChatListener(this, configManager, cooldownManager, webhookManager, fileLogger));
         getProxy().getPluginManager().registerListener(this, new ConnectionListener(cooldownManager));
         getProxy().getPluginManager().registerCommand(this, new ReloadCommand(this));
+        getProxy().getPluginManager().registerCommand(this, new StatusCommand(this));
 
         // bStats
         new Metrics(this, 24030);
@@ -108,6 +110,10 @@ public class CommandBlockerBungee extends Plugin {
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+
+    public WebhookManager getWebhookManager() {
+        return webhookManager;
     }
 
     public BungeeAudiences adventure() {

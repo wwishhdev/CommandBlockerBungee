@@ -5,6 +5,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +28,7 @@ public class WebhookManager {
     // Stores last-sent timestamp per player for rate-limiting
     private final Map<String, Long> playerLastWebhook = new ConcurrentHashMap<>();
     private static final int MAX_QUEUE_SIZE = 100;
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     // How long (ms) a player entry stays in the rate-limit map after it expires.
     // Evict entries that are older than 2x the configured rate-limit window.
     private static final long EVICTION_MULTIPLIER = 2;
@@ -45,7 +48,7 @@ public class WebhookManager {
         plugin.getProxy().getScheduler().schedule(plugin, this::evictStaleEntries, 60, 60, TimeUnit.SECONDS);
     }
 
-    public void sendWebhook(String playerName, String command) {
+    public void sendWebhook(String playerName, String command, String serverName, String uuid) {
         if (!config.isWebhookEnabled() || config.getWebhookUrl().isEmpty()) return;
 
         // Validate webhook URL to prevent SSRF
@@ -68,7 +71,7 @@ public class WebhookManager {
         }
         playerLastWebhook.put(playerName, now);
 
-        queue.add(new WebhookRequest(playerName, command));
+        queue.add(new WebhookRequest(playerName, command, serverName, uuid));
         queueSize.incrementAndGet();
     }
 
@@ -83,7 +86,7 @@ public class WebhookManager {
             // Sanitize Discord markdown in player name and command
             String safePlayer = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
             String safeCommand = req.command.replaceAll("([_`*~|])", "\\\\$1");
-            send(safePlayer, safeCommand, 0);
+            send(safePlayer, safeCommand, req.serverName, req.uuid, 0);
         }
     }
 
@@ -92,6 +95,15 @@ public class WebhookManager {
      * window. These entries serve no purpose once expired and would otherwise accumulate
      * indefinitely for every player that ever triggered a block.
      */
+    /**
+     * Clears queued webhooks and rate-limit state so that config changes take effect immediately.
+     */
+    public void reload() {
+        queue.clear();
+        queueSize.set(0);
+        playerLastWebhook.clear();
+    }
+
     private void evictStaleEntries() {
         long now = System.currentTimeMillis();
         long evictAfterMs = config.getWebhookRateLimit() * 1000L * EVICTION_MULTIPLIER;
@@ -102,7 +114,7 @@ public class WebhookManager {
      * NEW: Send with exponential-backoff retry on HTTP 429 (rate limited) or 5xx errors.
      * Max 3 attempts: immediate → 2 s → 4 s.
      */
-    private void send(String playerName, String command, int attempt) {
+    private void send(String playerName, String command, String serverName, String uuid, int attempt) {
         executor.execute(() -> {
             try {
                 // Redact sensitive commands
@@ -119,7 +131,10 @@ public class WebhookManager {
 
                 String content = config.getWebhookContent()
                         .replace("{player}", playerName)
-                        .replace("{command}", processedCommand);
+                        .replace("{command}", processedCommand)
+                        .replace("{server}", serverName)
+                        .replace("{uuid}", uuid)
+                        .replace("{timestamp}", TIMESTAMP_FORMAT.format(LocalDateTime.now()));
 
                 String jsonContent  = escapeJson(content);
                 String jsonUsername = escapeJson(config.getWebhookUsername());
@@ -141,7 +156,7 @@ public class WebhookManager {
                     // Exponential backoff: 2^attempt seconds (2 s, 4 s)
                     long delaySeconds = (long) Math.pow(2, attempt + 1);
                     plugin.getLogger().warning("Discord webhook returned " + status + ". Retrying in " + delaySeconds + "s (attempt " + (attempt + 1) + "/3).");
-                    plugin.getProxy().getScheduler().schedule(plugin, () -> send(playerName, command, attempt + 1), delaySeconds, TimeUnit.SECONDS);
+                    plugin.getProxy().getScheduler().schedule(plugin, () -> send(playerName, command, serverName, uuid, attempt + 1), delaySeconds, TimeUnit.SECONDS);
                 } else if (status < 200 || status >= 300) {
                     plugin.getLogger().warning("Discord webhook returned non-2xx status: " + status + " (all retries exhausted).");
                 }
@@ -154,10 +169,14 @@ public class WebhookManager {
     private static class WebhookRequest {
         final String playerName;
         final String command;
+        final String serverName;
+        final String uuid;
 
-        WebhookRequest(String playerName, String command) {
+        WebhookRequest(String playerName, String command, String serverName, String uuid) {
             this.playerName = playerName;
             this.command = command;
+            this.serverName = serverName;
+            this.uuid = uuid;
         }
     }
 

@@ -5,6 +5,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.velocitypowered.api.scheduler.ScheduledTask;
 import com.wish.commandblockervelocity.CommandBlockerVelocity;
 
 public class WebhookManager {
@@ -25,7 +28,10 @@ public class WebhookManager {
     private final AtomicInteger queueSize = new AtomicInteger(0);
     private final Map<String, Long> playerLastWebhook = new ConcurrentHashMap<>();
     private static final int MAX_QUEUE_SIZE = 100;
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final long EVICTION_MULTIPLIER = 2;
+    private final ScheduledTask processTask;
+    private final ScheduledTask evictTask;
 
     public WebhookManager(CommandBlockerVelocity plugin, ConfigManager config, ExecutorService executor) {
         this.plugin = plugin;
@@ -37,16 +43,16 @@ public class WebhookManager {
                 .build();
 
         // Process up to 4 queued webhooks per second
-        plugin.getProxy().getScheduler().buildTask(plugin, this::processQueue)
+        this.processTask = plugin.getProxy().getScheduler().buildTask(plugin, this::processQueue)
                 .repeat(1, TimeUnit.SECONDS)
                 .schedule();
         // FIX: Evict stale rate-limit entries every minute
-        plugin.getProxy().getScheduler().buildTask(plugin, this::evictStaleEntries)
+        this.evictTask = plugin.getProxy().getScheduler().buildTask(plugin, this::evictStaleEntries)
                 .repeat(60, TimeUnit.SECONDS)
                 .schedule();
     }
 
-    public void sendWebhook(String playerName, String command) {
+    public void sendWebhook(String playerName, String command, String serverName, String uuid) {
         if (!config.isWebhookEnabled() || config.getWebhookUrl().isEmpty()) return;
 
         String url = config.getWebhookUrl().toLowerCase();
@@ -63,7 +69,7 @@ public class WebhookManager {
         if (lastSent != null && (now - lastSent) < rateLimitMs) return;
         playerLastWebhook.put(playerName, now);
 
-        queue.add(new WebhookRequest(playerName, command));
+        queue.add(new WebhookRequest(playerName, command, serverName, uuid));
         queueSize.incrementAndGet();
     }
 
@@ -75,8 +81,22 @@ public class WebhookManager {
             queueSize.decrementAndGet();
             String safePlayer  = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
             String safeCommand = req.command.replaceAll("([_`*~|])", "\\\\$1");
-            send(safePlayer, safeCommand, 0);
+            send(safePlayer, safeCommand, req.serverName, req.uuid, 0);
         }
+    }
+
+    /**
+     * Clears queued webhooks and rate-limit state so that config changes take effect immediately.
+     */
+    public void reload() {
+        queue.clear();
+        queueSize.set(0);
+        playerLastWebhook.clear();
+    }
+
+    public void shutdown() {
+        if (processTask != null) processTask.cancel();
+        if (evictTask != null) evictTask.cancel();
     }
 
     private void evictStaleEntries() {
@@ -88,7 +108,7 @@ public class WebhookManager {
     /**
      * NEW: Exponential-backoff retry on 429 / 5xx. Max 3 total attempts.
      */
-    private void send(String playerName, String command, int attempt) {
+    private void send(String playerName, String command, String serverName, String uuid, int attempt) {
         executor.execute(() -> {
             try {
                 String processedCommand = command;
@@ -102,7 +122,10 @@ public class WebhookManager {
 
                 String content = config.getWebhookContent()
                         .replace("{player}", playerName)
-                        .replace("{command}", processedCommand);
+                        .replace("{command}", processedCommand)
+                        .replace("{server}", serverName)
+                        .replace("{uuid}", uuid)
+                        .replace("{timestamp}", TIMESTAMP_FORMAT.format(LocalDateTime.now()));
 
                 String jsonPayload = "{\"username\": \"" + escapeJson(config.getWebhookUsername())
                         + "\", \"avatar_url\": \"" + escapeJson(config.getWebhookAvatarUrl())
@@ -121,7 +144,7 @@ public class WebhookManager {
                 if ((status == 429 || (status >= 500 && status < 600)) && attempt < 2) {
                     long delaySeconds = (long) Math.pow(2, attempt + 1);
                     plugin.getLogger().warn("Discord webhook returned " + status + ". Retrying in " + delaySeconds + "s (attempt " + (attempt + 1) + "/3).");
-                    plugin.getProxy().getScheduler().buildTask(plugin, () -> send(playerName, command, attempt + 1))
+                    plugin.getProxy().getScheduler().buildTask(plugin, () -> send(playerName, command, serverName, uuid, attempt + 1))
                             .delay(delaySeconds, TimeUnit.SECONDS)
                             .schedule();
                 } else if (status < 200 || status >= 300) {
@@ -136,9 +159,13 @@ public class WebhookManager {
     private static class WebhookRequest {
         final String playerName;
         final String command;
-        WebhookRequest(String playerName, String command) {
+        final String serverName;
+        final String uuid;
+        WebhookRequest(String playerName, String command, String serverName, String uuid) {
             this.playerName = playerName;
             this.command = command;
+            this.serverName = serverName;
+            this.uuid = uuid;
         }
     }
 

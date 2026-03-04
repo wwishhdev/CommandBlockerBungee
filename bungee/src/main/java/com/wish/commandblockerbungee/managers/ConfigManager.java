@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import com.wish.commandblockerbungee.utils.NotificationAction;
+import com.wish.commandblockerbungee.utils.PunishmentAction;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -107,7 +108,15 @@ public class ConfigManager {
         return parse(configuration.getString("messages.block-message", "<red>This command is blocked."));
     }
 
+    public boolean isCustomMessagesEnabled() {
+        return configuration.getBoolean("custom-messages.enabled", false);
+    }
 
+    public Component getCustomBlockMessage(String baseCommand) {
+        if (!isCustomMessagesEnabled()) return null;
+        String msg = configuration.getString("custom-messages.commands." + baseCommand.toLowerCase(), null);
+        return msg != null ? parse(msg) : null;
+    }
 
     public boolean isAliasDetectionEnabled() {
         return configuration.getBoolean("alias-detection.enabled", true);
@@ -347,6 +356,33 @@ public class ConfigManager {
     }
 
     // ========================================================================
+    // Auto-Punishments
+    // ========================================================================
+    public boolean isAutoPunishmentsEnabled() {
+        return configuration.getBoolean("auto-punishments.enabled", false);
+    }
+
+    public List<PunishmentAction> getAutoPunishments() {
+        List<PunishmentAction> actions = new ArrayList<>();
+        List<?> list = configuration.getList("auto-punishments.actions");
+
+        if (list != null) {
+            for (Object obj : list) {
+                if (obj instanceof Map) {
+                    Map<?, ?> map = (Map<?, ?>) obj;
+                    Object thresholdObj = map.get("threshold");
+                    String command = (String) map.get("command");
+                    if (thresholdObj instanceof Number && command != null) {
+                        actions.add(new PunishmentAction(((Number) thresholdObj).intValue(), command));
+                    }
+                }
+            }
+        }
+        actions.sort((a, b) -> Integer.compare(a.getThreshold(), b.getThreshold()));
+        return actions;
+    }
+
+    // ========================================================================
     // Audit Log
     // ========================================================================
 
@@ -357,6 +393,17 @@ public class ConfigManager {
     public int getAuditLogMaxFiles() {
         int max = configuration.getInt("audit-log.max-files", 30);
         return Math.max(1, Math.min(max, 365));
+    }
+
+    // ========================================================================
+    // Tab-Complete Whitelist
+    // ========================================================================
+    public boolean isTabCompleteWhitelistEnabled() {
+        return configuration.getBoolean("tab-complete-whitelist.enabled", false);
+    }
+
+    public List<String> getTabCompleteWhitelistAllowed() {
+        return configuration.getStringList("tab-complete-whitelist.allowed");
     }
 
     // ========================================================================

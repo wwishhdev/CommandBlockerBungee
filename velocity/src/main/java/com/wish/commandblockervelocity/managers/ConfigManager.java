@@ -16,6 +16,7 @@ import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import com.wish.commandblockervelocity.CommandBlockerVelocity;
 import com.wish.commandblockervelocity.utils.NotificationAction;
+import com.wish.commandblockervelocity.utils.PunishmentAction;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -132,7 +133,15 @@ public class ConfigManager {
         return parse(getString("<red>This command is blocked.", "messages", "block-message"));
     }
 
+    public boolean isCustomMessagesEnabled() {
+        return getBoolean(false, "custom-messages", "enabled");
+    }
 
+    public Component getCustomBlockMessage(String baseCommand) {
+        if (!isCustomMessagesEnabled()) return null;
+        String msg = rootNode.node("custom-messages", "commands", baseCommand.toLowerCase()).getString(null);
+        return msg != null ? parse(msg) : null;
+    }
 
     // Alias Detection
     public boolean isAliasDetectionEnabled() {
@@ -384,6 +393,31 @@ public class ConfigManager {
     }
 
     // ========================================================================
+    // Auto-Punishments
+    // ========================================================================
+    public boolean isAutoPunishmentsEnabled() {
+        return getBoolean(false, "auto-punishments", "enabled");
+    }
+
+    public List<PunishmentAction> getAutoPunishments() {
+        List<PunishmentAction> actions = new ArrayList<>();
+        try {
+            List<? extends ConfigurationNode> list = rootNode.node("auto-punishments", "actions").childrenList();
+            for (ConfigurationNode node : list) {
+                int threshold = node.node("threshold").getInt(0);
+                String command = node.node("command").getString();
+                if (threshold > 0 && command != null) {
+                    actions.add(new PunishmentAction(threshold, command));
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().error("Error loading auto-punishments: " + e.getMessage());
+        }
+        actions.sort((a, b) -> Integer.compare(a.getThreshold(), b.getThreshold()));
+        return actions;
+    }
+
+    // ========================================================================
     // Audit Log
     // ========================================================================
 
@@ -394,6 +428,17 @@ public class ConfigManager {
     public int getAuditLogMaxFiles() {
         int max = getInt(30, "audit-log", "max-files");
         return Math.max(1, Math.min(max, 365));
+    }
+
+    // ========================================================================
+    // Tab-Complete Whitelist
+    // ========================================================================
+    public boolean isTabCompleteWhitelistEnabled() {
+        return getBoolean(false, "tab-complete-whitelist", "enabled");
+    }
+
+    public List<String> getTabCompleteWhitelistAllowed() {
+        return getStringList("tab-complete-whitelist", "allowed");
     }
 
     // ========================================================================

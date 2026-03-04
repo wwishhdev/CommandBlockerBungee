@@ -18,6 +18,7 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.wish.commandblockervelocity.commands.ReloadCommand;
+import com.wish.commandblockervelocity.commands.StatusCommand;
 import com.wish.commandblockervelocity.database.DatabaseManager;
 import com.wish.commandblockervelocity.listeners.ChatListener;
 import com.wish.commandblockervelocity.listeners.ConnectionListener;
@@ -29,7 +30,7 @@ import com.wish.commandblockervelocity.utils.FileLogger;
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
-        version = "2.2.0",
+        version = "2.3.0",
         description = "A plugin to block commands in Velocity",
         authors = {"wwishhdev"}
 )
@@ -73,7 +74,7 @@ public class CommandBlockerVelocity {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                "                CommandBlockerVelocity v2.2.0 \u2764\n" +
+                "                CommandBlockerVelocity v2.3.0 \u2764\n" +
                 "                                                          by wwishhdev\n");
 
         // Managers
@@ -84,7 +85,7 @@ public class CommandBlockerVelocity {
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
-        this.fileLogger = new FileLogger(dataDirectory, executorService, logger);
+        this.fileLogger = new FileLogger(dataDirectory, executorService, logger, configManager.getAuditLogMaxFiles());
 
         // Listeners
         proxy.getEventManager().register(this, new ChatListener(this, configManager, cooldownManager, webhookManager, fileLogger));
@@ -99,6 +100,12 @@ public class CommandBlockerVelocity {
 
         commandManager.register(commandMeta, new ReloadCommand(this));
 
+        CommandMeta statusMeta = commandManager.metaBuilder("cbstatus")
+                .aliases("cbinfo")
+                .plugin(this)
+                .build();
+        commandManager.register(statusMeta, new StatusCommand(this));
+
         // bStats
         metricsFactory.make(this, 24030);
 
@@ -107,6 +114,9 @@ public class CommandBlockerVelocity {
 
     @Subscribe
     public void onProxyShutdown(ProxyShutdownEvent event) {
+        if (webhookManager != null) {
+            webhookManager.shutdown();
+        }
         if (cooldownManager != null) {
             cooldownManager.clear();
         }
@@ -143,6 +153,8 @@ public class CommandBlockerVelocity {
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
     }
-    
-    // Add close logic for velocity if possible (ProxyShutdownEvent) but simple works for now
+
+    public WebhookManager getWebhookManager() {
+        return webhookManager;
+    }
 }

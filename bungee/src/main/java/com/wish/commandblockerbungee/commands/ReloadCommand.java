@@ -24,6 +24,7 @@ public class ReloadCommand extends Command {
             try {
                 config.loadConfiguration();
                 plugin.getDatabaseManager().reload();
+                plugin.getWebhookManager().reload();
                 
                 if (sender instanceof ProxiedPlayer) {
                     plugin.adventure().player((ProxiedPlayer) sender).sendMessage(config.getReloadSuccessMessage());

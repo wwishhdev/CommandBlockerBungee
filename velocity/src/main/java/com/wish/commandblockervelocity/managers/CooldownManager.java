@@ -1,13 +1,16 @@
 package com.wish.commandblockervelocity.managers;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import com.velocitypowered.api.proxy.Player;
+import com.velocitypowered.api.scheduler.ScheduledTask;
 import com.wish.commandblockervelocity.CommandBlockerVelocity;
 import com.wish.commandblockervelocity.database.DatabaseManager;
+import com.wish.commandblockervelocity.utils.PunishmentAction;
 
 public class CooldownManager {
 
@@ -15,6 +18,7 @@ public class CooldownManager {
     private final ConfigManager configManager;
     private final DatabaseManager databaseManager;
     private final Map<UUID, CommandAttempts> playerAttempts;
+    private final ScheduledTask cleanupTask;
 
     public CooldownManager(CommandBlockerVelocity plugin, ConfigManager configManager, DatabaseManager databaseManager) {
         this.plugin = plugin;
@@ -22,7 +26,7 @@ public class CooldownManager {
         this.databaseManager = databaseManager;
         this.playerAttempts = new ConcurrentHashMap<>();
 
-        plugin.getProxy().getScheduler().buildTask(plugin, this::cleanupOldAttempts)
+        this.cleanupTask = plugin.getProxy().getScheduler().buildTask(plugin, this::cleanupOldAttempts)
                 .repeat(30, TimeUnit.MINUTES)
                 .schedule();
     }
@@ -75,6 +79,11 @@ public class CooldownManager {
 
             attempts.incrementAttempts();
 
+            // Auto-punishments: execute commands when thresholds are reached
+            if (configManager.isAutoPunishmentsEnabled()) {
+                checkAutoPunishments(player, attempts.attempts);
+            }
+
             // FIX: Use >= so the Nth attempt (exactly at max) triggers the timeout.
             if (attempts.attempts >= configManager.getMaxAttempts()) {
                 attempts.setTimeout(configManager.getTimeoutDuration());
@@ -90,6 +99,20 @@ public class CooldownManager {
         }
 
         return false;
+    }
+
+    private void checkAutoPunishments(Player player, int currentAttempts) {
+        List<PunishmentAction> punishments = configManager.getAutoPunishments();
+        for (PunishmentAction action : punishments) {
+            if (currentAttempts == action.getThreshold()) {
+                String sanitizedPlayer = player.getUsername().replaceAll("[^a-zA-Z0-9_]", "");
+                String cmd = action.getCommand().replace("{player}", sanitizedPlayer);
+                plugin.getProxy().getCommandManager().executeAsync(
+                        plugin.getProxy().getConsoleCommandSource(), cmd
+                );
+                plugin.getLogger().info("Auto-punishment executed for " + player.getUsername() + ": " + cmd);
+            }
+        }
     }
 
     public void removeCooldown(UUID uuid) {
@@ -138,6 +161,9 @@ public class CooldownManager {
             });
         }
         playerAttempts.clear();
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
+        }
     }
 
     private static class CommandAttempts {
