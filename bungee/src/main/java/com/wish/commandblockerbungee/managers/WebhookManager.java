@@ -7,6 +7,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +17,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.wish.commandblockerbungee.CommandBlockerBungee;
+
+import net.md_5.bungee.api.scheduler.ScheduledTask;
 
 public class WebhookManager {
 
@@ -32,6 +35,8 @@ public class WebhookManager {
     // How long (ms) a player entry stays in the rate-limit map after it expires.
     // Evict entries that are older than 2x the configured rate-limit window.
     private static final long EVICTION_MULTIPLIER = 2;
+    private final ScheduledTask processTask;
+    private final ScheduledTask evictTask;
 
     public WebhookManager(CommandBlockerBungee plugin, ConfigManager config, ExecutorService executor) {
         this.plugin = plugin;
@@ -43,16 +48,16 @@ public class WebhookManager {
                 .build();
 
         // Process up to 4 queued webhooks per second
-        plugin.getProxy().getScheduler().schedule(plugin, this::processQueue, 1, 1, TimeUnit.SECONDS);
+        this.processTask = plugin.getProxy().getScheduler().schedule(plugin, this::processQueue, 1, 1, TimeUnit.SECONDS);
         // FIX: Evict stale rate-limit entries every minute to prevent unbounded map growth
-        plugin.getProxy().getScheduler().schedule(plugin, this::evictStaleEntries, 60, 60, TimeUnit.SECONDS);
+        this.evictTask = plugin.getProxy().getScheduler().schedule(plugin, this::evictStaleEntries, 60, 60, TimeUnit.SECONDS);
     }
 
     public void sendWebhook(String playerName, String command, String serverName, String uuid) {
         if (!config.isWebhookEnabled() || config.getWebhookUrl().isEmpty()) return;
 
         // Validate webhook URL to prevent SSRF
-        String url = config.getWebhookUrl().toLowerCase();
+        String url = config.getWebhookUrl().toLowerCase(Locale.ROOT);
         if (!url.startsWith("https://discord.com/api/webhooks/") && !url.startsWith("https://discordapp.com/api/webhooks/")) {
             plugin.getLogger().warning("Discord webhook URL is not a valid Discord webhook. Skipping.");
             return;
@@ -86,12 +91,13 @@ public class WebhookManager {
             // Sanitize Discord markdown in player name and command
             String safePlayer = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
             String safeCommand = req.command.replaceAll("([_`*~|])", "\\\\$1");
-            send(safePlayer, safeCommand, req.serverName, req.uuid, 0);
+            String safeServer = req.serverName.replaceAll("([_`*~|])", "\\\\$1");
+            send(safePlayer, safeCommand, safeServer, req.uuid, 0);
         }
     }
 
     /**
-     * FIX: Remove playerLastWebhook map entries that are older than 2× the rate-limit
+     * FIX: Remove playerLastWebhook map entries that are older than 2x the rate-limit
      * window. These entries serve no purpose once expired and would otherwise accumulate
      * indefinitely for every player that ever triggered a block.
      */
@@ -104,6 +110,11 @@ public class WebhookManager {
         playerLastWebhook.clear();
     }
 
+    public void shutdown() {
+        if (processTask != null) processTask.cancel();
+        if (evictTask != null) evictTask.cancel();
+    }
+
     private void evictStaleEntries() {
         long now = System.currentTimeMillis();
         long evictAfterMs = config.getWebhookRateLimit() * 1000L * EVICTION_MULTIPLIER;
@@ -112,14 +123,14 @@ public class WebhookManager {
 
     /**
      * NEW: Send with exponential-backoff retry on HTTP 429 (rate limited) or 5xx errors.
-     * Max 3 attempts: immediate → 2 s → 4 s.
+     * Max 3 attempts: immediate -> 2 s -> 4 s.
      */
     private void send(String playerName, String command, String serverName, String uuid, int attempt) {
         executor.execute(() -> {
             try {
                 // Redact sensitive commands
                 String processedCommand = command;
-                String lowerCmd = command.toLowerCase().replaceAll("^/+", "");
+                String lowerCmd = command.toLowerCase(Locale.ROOT).replaceAll("^/+", "");
                 if (lowerCmd.startsWith("login") || lowerCmd.startsWith("register") || lowerCmd.startsWith("changepassword")
                         || lowerCmd.startsWith("l ") || lowerCmd.startsWith("log ") || lowerCmd.startsWith("reg ")
                         || lowerCmd.startsWith("passwd") || lowerCmd.startsWith("premium") || lowerCmd.startsWith("auth")) {
@@ -140,7 +151,10 @@ public class WebhookManager {
                 String jsonUsername = escapeJson(config.getWebhookUsername());
                 String jsonAvatar   = escapeJson(config.getWebhookAvatarUrl());
 
-                String jsonPayload = "{\"username\": \"" + jsonUsername + "\", \"avatar_url\": \"" + jsonAvatar + "\", \"content\": \"" + jsonContent + "\"}";
+                String jsonPayload = "{\"username\": \"" + jsonUsername
+                        + "\", \"avatar_url\": \"" + jsonAvatar
+                        + "\", \"content\": \"" + jsonContent
+                        + "\", \"allowed_mentions\": {\"parse\": []}}";
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(config.getWebhookUrl()))

@@ -51,7 +51,7 @@ public class CommandBlockerBungee extends Plugin {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                ChatColor.YELLOW + "                CommandBlockerBungee v2.3.0 " + ChatColor.RED + "❤\n" +
+                ChatColor.YELLOW + "                CommandBlockerBungee v2.4.0 " + ChatColor.RED + "❤\n" +
                 ChatColor.AQUA + "                                                          by wwishhdev\n"
         ));
 
@@ -85,6 +85,9 @@ public class CommandBlockerBungee extends Plugin {
         }
         if (cooldownManager != null) {
             cooldownManager.clear();
+        }
+        if (webhookManager != null) {
+            webhookManager.shutdown();
         }
         if (databaseManager != null) {
             databaseManager.close();

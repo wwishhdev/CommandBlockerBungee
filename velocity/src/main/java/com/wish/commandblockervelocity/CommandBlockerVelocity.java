@@ -30,7 +30,7 @@ import com.wish.commandblockervelocity.utils.FileLogger;
 @Plugin(
         id = "commandblockervelocity",
         name = "CommandBlockerVelocity",
-        version = "2.3.0",
+        version = "2.4.0",
         description = "A plugin to block commands in Velocity",
         authors = {"wwishhdev"}
 )
@@ -74,7 +74,7 @@ public class CommandBlockerVelocity {
                 "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
                 "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
                 " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                "                CommandBlockerVelocity v2.3.0 \u2764\n" +
+                "                CommandBlockerVelocity v2.4.0 \u2764\n" +
                 "                                                          by wwishhdev\n");
 
         // Managers

@@ -4,7 +4,7 @@
 #| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |
 # \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|____/|_|\___/ \___|_|\_\___|_|
 #
-# CommandBlockerBungee v2.3.0
+# CommandBlockerBungee v2.4.0
 # Author: wwishhdev
 
 # =============================================================================
@@ -175,7 +175,7 @@ discord-webhook:
   content: "**{player}** tried to use blocked command: `{command}` on server `{server}`"
   rate-limit: 10            # Seconds between webhook messages per player (1-300)
   # Retry on Discord 429 (rate limited) or 5xx errors.
-  # Max 3 total attempts with exponential backoff: immediate → 2s → 4s.
+  # Max 3 total attempts with exponential backoff: immediate -> 2s -> 4s.
 
 # =============================================================================
 # Server-specific Command Blocking

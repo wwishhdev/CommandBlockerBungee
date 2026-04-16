@@ -1,97 +1,111 @@
-# CommandBlockerBungee & Velocity
+# CommandBlockerBungee & CommandBlockerVelocity
 
-An advanced and efficient plugin to block commands across your entire network, supporting both **BungeeCord** and **Velocity**.
+CommandBlocker blocks sensitive or unwanted commands at the proxy layer for BungeeCord and Velocity networks.
 
-## 🚀 Features
+## Features
 
-- **Multi-Platform Support**: Works seamlessly on both BungeeCord and Velocity.
-- **Advanced Blocking System**:
-  - Block specific commands (with case-insensitivity).
-  - **Alias Detection**: specific checks for `minecraft:op` or `plugins:pl` syntax.
-  - **Subcommand Blocking**: Option to block specific subcommands like `/op help`.
-- **Smart Cooldowns**:
-  - Prevent command spamming with a configurable cooldown system.
-  - Timeout players who exceed maximum attempts.
-  - Auto-reset cooldowns after a set period.
-- **Database Support**:
-  - **SQLite**: No setup required, works out of the box.
-  - **MySQL**: High-performance support for networks that need data persistence across restarts.
-- **Discord Integration**:
-  - Send real-time alerts to a Discord channel via Webhooks when players try to use blocked commands.
-  - Highly customizable messages and embed styles.
-- **Interactive Staff Notifications**:
-  - Alerts are not just text; they are clickable!
-  - Staff can **Kick**, **Ban**, or **Temp-Ban** offenders directly from the chat notification.
-- **Highly Configurable**:
-  - Custom messages with **MiniMessage** support (gradients, rgb, etc.) and legacy '&' color codes.
-  - Toggles for almost every feature.
+- Multi-platform support for BungeeCord and Velocity.
+- Exact, wildcard, and regex command blocking.
+- Alias protection for prefixed commands such as `minecraft:op`.
+- Optional help-subcommand protection such as `/op help`.
+- Allowed-command overrides.
+- Per-server blocked command lists.
+- Command attempt cooldowns and temporary timeouts.
+- Optional SQLite or MySQL persistence.
+- Optional Discord webhook alerts.
+- Staff notifications with configurable click actions.
+- Optional audit logs with daily rotation.
+- Tab-complete whitelist mode.
 
-## 📥 Installation
+## Requirements
+
+- Java 21.
+- Maven 3.8+ for building from source.
+- BungeeCord-compatible proxy for `CommandBlockerBungee`.
+- Velocity 3.3-compatible proxy for `CommandBlockerVelocity`.
+
+## Build
+
+Build and test both modules from the repository root:
+
+```bash
+mvn test
+mvn package
+```
+
+The shaded JARs are generated at:
+
+- `bungee/target/CommandBlockerBungee-2.4.0.jar`
+- `velocity/target/CommandBlockerVelocity-2.4.0.jar`
+
+## Installation
 
 ### BungeeCord
-1. Download `CommandBlockerBungee-2.3.0.jar`.
-2. Place the jar file in your `plugins` folder.
-3. Restart your proxy.
+
+1. Build or download `CommandBlockerBungee-2.4.0.jar`.
+2. Place it in the proxy `plugins` folder.
+3. Restart the proxy.
 
 ### Velocity
-1. Download `CommandBlockerVelocity-2.3.0.jar`.
-2. Place the jar file in your `plugins` folder.
-3. Restart your proxy.
 
-## ⚙️ Configuration
+1. Build or download `CommandBlockerVelocity-2.4.0.jar`.
+2. Place it in the proxy `plugins` folder.
+3. Restart the proxy.
 
-The `config.yml` is generated automatically. Here is a brief overview of the new capabilities:
+## Commands
+
+| Command | Aliases | Permission | Description |
+|---|---|---|---|
+| `/cblockerreload` | `/cbreload` | `commandblocker.reload` | Reloads configuration and runtime integrations. |
+| `/cbstatus` | `/cbinfo` | `commandblocker.admin` | Shows current feature and runtime status. |
+
+## Permissions
+
+| Permission | Description | Default |
+|---|---|---|
+| `commandblocker.*` | Grants all CommandBlocker permissions. | OP |
+| `commandblocker.bypass` | Full bypass for blocking and cooldown checks. | OP |
+| `commandblocker.bypass.block` | Bypasses command blocking only. | OP |
+| `commandblocker.bypass.cooldown` | Bypasses cooldown and timeout checks only. | OP |
+| `commandblocker.reload` | Allows `/cblockerreload` and `/cbreload`. | OP |
+| `commandblocker.notify` | Receives staff notifications. | OP |
+| `commandblocker.admin` | Allows `/cbstatus` and `/cbinfo`. | OP |
+
+## Configuration
+
+The plugin creates `config.yml` on first startup.
+
+Important sections:
+
+- `blocked-commands`: global blocked command rules.
+- `allowed-commands-settings`: commands that should always be allowed.
+- `server-blocked-commands`: backend-server-specific rules.
+- `cooldown`: attempt limits and timeout behavior.
+- `database`: SQLite/MySQL persistence settings.
+- `discord-webhook`: Discord alert delivery.
+- `notification-actions`: clickable staff actions.
+- `audit-log`: daily text log output and retention.
+- `tab-complete-whitelist`: strict tab-complete filtering.
+
+Command rules support:
 
 ```yaml
 blocked-commands:
   - "op"
-  - "pl"
-  - "plugins"
-
-# ... (Basic blocking settings) ...
-
-# NEW: Database Support
-database:
-  enabled: true
-  type: "sqlite" # or "mysql"
-  # Connection details for MySQL...
-
-# NEW: Discord Integration
-discord-webhook:
-  enabled: true
-  url: "YOUR_WEBHOOK_URL"
-  username: "CommandBlocker"
-  content: "**{player}** tried to use blocked command: `{command}`"
-
-# NEW: Interactive Actions in Chat
-notification-actions:
-  enabled: true
-  actions:
-    - label: " [KICK]"
-      command: "/kick {player} Blocked Commands"
+  - "wildcard:game*"
+  - "regex:ban(ip|list)?"
 ```
 
-## 🔒 Permissions
+## Testing Scope
 
-| Permission | Description | Default |
-|---|---|---|
-| `commandblocker.admin` | Grants all permissions | OP |
-| `commandblocker.bypass` | Bypass command blocking | OP |
-| `commandblocker.reload` | Access to `/cbreload` | OP |
-| `commandblocker.notify` | Receive staff notifications | OP |
+The unit tests focus on the security-critical command matcher in both platform modules. They validate alias detection, Unicode invisible character stripping, wildcard/regex matching, server-specific rules, allowlist priority, invalid regex handling, and false-positive protection for regular command arguments.
 
-## 🛠 Commands
+Full proxy smoke testing still requires running the generated JAR on a real or staged BungeeCord/Velocity proxy because command event dispatch, permissions, and plugin lifecycle are owned by the proxy runtime.
 
-- `/cbreload` (or `/commandblocker.reload`): Reloads the configuration file without restarting the server.
+## Statistics
 
-## 📊 Statistics
+This plugin uses bStats for anonymous usage statistics. You can opt out in the bStats configuration.
 
-This plugin uses **bStats** to collect anonymous usage statistics. This helps me understand how the plugin is used and improve it. You can opt-out by disabling it in the bStats configuration.
+## License
 
-## 🤝 Support
-
-If you have any issues or suggestions, please join our [Discord server](https://discord.gg/m8V9pns6dB) or open an issue on the repository.
-
-## ⚖️ License
-
-This project is licensed under the **MIT License**.
+This project is licensed under the MIT License.

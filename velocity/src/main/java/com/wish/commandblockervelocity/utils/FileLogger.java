@@ -49,9 +49,9 @@ public class FileLogger {
      */
     public void logBlockedCommand(String playerName, String playerUUID, String server, String command) {
         String timestamp = TIMESTAMP_FORMAT.format(LocalDateTime.now());
-        String line = "[" + timestamp + "] BLOCKED | Player: " + playerName
-                + " (" + playerUUID + ") | Server: " + server
-                + " | Command: " + command;
+        String line = "[" + timestamp + "] BLOCKED | Player: " + oneLine(playerName)
+                + " (" + oneLine(playerUUID) + ") | Server: " + oneLine(server)
+                + " | Command: " + oneLine(command);
         writeAsync(line);
     }
 
@@ -60,9 +60,14 @@ public class FileLogger {
      */
     public void logTimeout(String playerName, String playerUUID, String server) {
         String timestamp = TIMESTAMP_FORMAT.format(LocalDateTime.now());
-        String line = "[" + timestamp + "] TIMEOUT | Player: " + playerName
-                + " (" + playerUUID + ") | Server: " + server;
+        String line = "[" + timestamp + "] TIMEOUT | Player: " + oneLine(playerName)
+                + " (" + oneLine(playerUUID) + ") | Server: " + oneLine(server);
         writeAsync(line);
+    }
+
+    private String oneLine(String value) {
+        if (value == null) return "";
+        return value.replace("\r", "\\r").replace("\n", "\\n");
     }
 
     private void writeAsync(String line) {

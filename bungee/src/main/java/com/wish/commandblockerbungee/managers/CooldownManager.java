@@ -1,8 +1,10 @@
 package com.wish.commandblockerbungee.managers;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -11,6 +13,7 @@ import com.wish.commandblockerbungee.database.DatabaseManager;
 import com.wish.commandblockerbungee.utils.PunishmentAction;
 
 import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.scheduler.ScheduledTask;
 
 public class CooldownManager {
 
@@ -18,6 +21,7 @@ public class CooldownManager {
     private final ConfigManager configManager;
     private final DatabaseManager databaseManager;
     private final Map<UUID, CommandAttempts> playerAttempts;
+    private final ScheduledTask cleanupTask;
 
     public CooldownManager(CommandBlockerBungee plugin, ConfigManager configManager, DatabaseManager databaseManager) {
         this.plugin = plugin;
@@ -26,7 +30,7 @@ public class CooldownManager {
         this.playerAttempts = new ConcurrentHashMap<>();
         
         // Schedule cleanup task
-        plugin.getProxy().getScheduler().schedule(plugin, this::cleanupOldAttempts, 30, 30, TimeUnit.MINUTES);
+        this.cleanupTask = plugin.getProxy().getScheduler().schedule(plugin, this::cleanupOldAttempts, 30, 30, TimeUnit.MINUTES);
     }
 
     public void loadPlayer(UUID uuid) {
@@ -157,14 +161,29 @@ public class CooldownManager {
      * so that active timeouts survive reloads and shutdowns.
      */
     public void clear() {
+        List<CompletableFuture<Void>> saves = new ArrayList<>();
         if (configManager.isDatabaseEnabled()) {
             playerAttempts.forEach((uuid, attempts) -> {
                 synchronized (attempts) {
-                    databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+                    saves.add(databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil));
                 }
             });
         }
+        waitForSaves(saves);
         playerAttempts.clear();
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
+        }
+    }
+
+    private void waitForSaves(List<CompletableFuture<Void>> saves) {
+        if (saves.isEmpty()) return;
+
+        try {
+            CompletableFuture.allOf(saves.toArray(new CompletableFuture[0])).get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Timed out while saving cooldown data during shutdown: " + e.getMessage());
+        }
     }
 
     private static class CommandAttempts {

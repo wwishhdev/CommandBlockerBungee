@@ -1,8 +1,10 @@
 package com.wish.commandblockervelocity.managers;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -153,16 +155,28 @@ public class CooldownManager {
      * so that active timeouts survive reloads and shutdowns.
      */
     public void clear() {
+        List<CompletableFuture<Void>> saves = new ArrayList<>();
         if (configManager.isDatabaseEnabled()) {
             playerAttempts.forEach((uuid, attempts) -> {
                 synchronized (attempts) {
-                    databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil);
+                    saves.add(databaseManager.saveCooldown(uuid, attempts.attempts, attempts.lastAttempt, attempts.timeoutUntil));
                 }
             });
         }
+        waitForSaves(saves);
         playerAttempts.clear();
         if (cleanupTask != null) {
             cleanupTask.cancel();
+        }
+    }
+
+    private void waitForSaves(List<CompletableFuture<Void>> saves) {
+        if (saves.isEmpty()) return;
+
+        try {
+            CompletableFuture.allOf(saves.toArray(new CompletableFuture[0])).get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            plugin.getLogger().warn("Timed out while saving cooldown data during shutdown: " + e.getMessage());
         }
     }
 

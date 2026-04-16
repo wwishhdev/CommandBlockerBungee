@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -139,7 +140,7 @@ public class ConfigManager {
 
     public Component getCustomBlockMessage(String baseCommand) {
         if (!isCustomMessagesEnabled()) return null;
-        String msg = rootNode.node("custom-messages", "commands", baseCommand.toLowerCase()).getString(null);
+        String msg = rootNode.node("custom-messages", "commands", baseCommand.toLowerCase(Locale.ROOT)).getString(null);
         return msg != null ? parse(msg) : null;
     }
 
@@ -176,7 +177,7 @@ public class ConfigManager {
     public List<String> getServerBlockedCommands(String serverName) {
         if (serverName == null || serverName.isEmpty()) return Collections.emptyList();
         try {
-            return rootNode.node("server-blocked-commands", serverName.toLowerCase()).getList(String.class, Collections.emptyList());
+            return rootNode.node("server-blocked-commands", serverName).getList(String.class, Collections.emptyList());
         } catch (Exception e) {
             return Collections.emptyList();
         }

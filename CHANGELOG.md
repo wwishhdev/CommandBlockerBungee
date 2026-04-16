@@ -4,6 +4,42 @@ All notable changes to CommandBlockerBungee & CommandBlockerVelocity will be doc
 
 ---
 
+## [2.4.0] - 2026-04-16
+
+### Added
+
+- Added a root Maven aggregator so both BungeeCord and Velocity modules can be validated with one `mvn test` or `mvn package` command.
+- Added JUnit 5 command-matching tests for both modules, covering exact blocks, plugin-prefix aliases, Unicode invisible character bypasses, wildcard/regex rules, server-specific rules, allowlist priority, invalid regex handling, and deep-scan false-positive protection.
+
+### Changed
+
+- Extracted command-block matching into a platform-local `CommandMatcher` in both modules so the security-critical logic is testable without a live proxy runtime.
+- Updated the Velocity startup banner to report version `2.4.0`.
+- Normalized case handling with `Locale.ROOT` for command/security comparisons.
+- Escaped backend server names before inserting them into MiniMessage staff notifications.
+- Disabled Discord webhook mentions through `allowed_mentions` and escaped server names in webhook content.
+- Replaced corrupted status separator characters with ASCII separators.
+
+### Fixed
+
+- Fixed `commandblocker.admin` missing from BungeeCord `plugin.yml`, which made `/cbstatus` inconsistent with the documented permission model.
+- Fixed server-specific command rules so exact server-name keys work as documented, while still supporting lowercase fallback for existing configs.
+- Fixed shutdown persistence ordering by waiting briefly for cooldown saves before clearing memory and closing the database pool.
+- Fixed BungeeCord scheduled webhook and cooldown tasks so they are explicitly cancelled during shutdown.
+- Fixed audit log line injection risk by escaping CR/LF characters in logged fields.
+- Fixed tab-complete whitelist filtering to ignore malformed null entries instead of risking a runtime error.
+
+### Security
+
+- Pinned `com.google.protobuf:protobuf-java` to `3.25.5` in both modules to avoid the vulnerable `3.25.1` version pulled transitively by `mysql-connector-j:8.3.0` (CVE-2024-7254).
+- Reduced Discord webhook abuse surface by preventing blocked command content from triggering user, role, or everyone mentions.
+
+### Docs
+
+- Rewrote the README with clean ASCII text, current commands, permission coverage, root build commands, and the exact scope of automated tests.
+
+---
+
 ## [2.3.0] - 2026-03-04
 
 ### Security Fixes

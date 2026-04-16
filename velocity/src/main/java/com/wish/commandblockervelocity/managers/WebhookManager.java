@@ -7,6 +7,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,7 +56,7 @@ public class WebhookManager {
     public void sendWebhook(String playerName, String command, String serverName, String uuid) {
         if (!config.isWebhookEnabled() || config.getWebhookUrl().isEmpty()) return;
 
-        String url = config.getWebhookUrl().toLowerCase();
+        String url = config.getWebhookUrl().toLowerCase(Locale.ROOT);
         if (!url.startsWith("https://discord.com/api/webhooks/") && !url.startsWith("https://discordapp.com/api/webhooks/")) {
             plugin.getLogger().warn("Discord webhook URL is not a valid Discord webhook. Skipping.");
             return;
@@ -81,7 +82,8 @@ public class WebhookManager {
             queueSize.decrementAndGet();
             String safePlayer  = req.playerName.replaceAll("([_`*~|])", "\\\\$1");
             String safeCommand = req.command.replaceAll("([_`*~|])", "\\\\$1");
-            send(safePlayer, safeCommand, req.serverName, req.uuid, 0);
+            String safeServer = req.serverName.replaceAll("([_`*~|])", "\\\\$1");
+            send(safePlayer, safeCommand, safeServer, req.uuid, 0);
         }
     }
 
@@ -112,7 +114,7 @@ public class WebhookManager {
         executor.execute(() -> {
             try {
                 String processedCommand = command;
-                String lowerCmd = command.toLowerCase().replaceAll("^/+", "");
+                String lowerCmd = command.toLowerCase(Locale.ROOT).replaceAll("^/+", "");
                 if (lowerCmd.startsWith("login") || lowerCmd.startsWith("register") || lowerCmd.startsWith("changepassword")
                         || lowerCmd.startsWith("l ") || lowerCmd.startsWith("log ") || lowerCmd.startsWith("reg ")
                         || lowerCmd.startsWith("passwd") || lowerCmd.startsWith("premium") || lowerCmd.startsWith("auth")) {
@@ -129,7 +131,8 @@ public class WebhookManager {
 
                 String jsonPayload = "{\"username\": \"" + escapeJson(config.getWebhookUsername())
                         + "\", \"avatar_url\": \"" + escapeJson(config.getWebhookAvatarUrl())
-                        + "\", \"content\": \"" + escapeJson(content) + "\"}";
+                        + "\", \"content\": \"" + escapeJson(content)
+                        + "\", \"allowed_mentions\": {\"parse\": []}}";
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(config.getWebhookUrl()))
