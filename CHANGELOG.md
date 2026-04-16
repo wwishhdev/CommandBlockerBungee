@@ -14,6 +14,7 @@ All notable changes to CommandBlockerBungee & CommandBlockerVelocity will be doc
 ### Changed
 
 - Extracted command-block matching into a platform-local `CommandMatcher` in both modules so the security-critical logic is testable without a live proxy runtime.
+- Updated the Velocity startup banner to report version `2.4.0`.
 - Normalized case handling with `Locale.ROOT` for command/security comparisons.
 - Escaped backend server names before inserting them into MiniMessage staff notifications.
 - Disabled Discord webhook mentions through `allowed_mentions` and escaped server names in webhook content.
