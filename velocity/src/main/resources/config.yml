@@ -1,0 +1,216 @@
+#  ____                                          _ ____  _            _
+# / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| | __ )| | ___   ___| | _____ _ __
+#| |   / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` |  _ \| |/ _ \ / __| |/ / _ \ '__|
+#| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |
+# \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|____/|_|\___/ \___|_|\_\___|_|
+#
+# CommandBlockerVelocity v2.4.0
+# Author: wwishhdev
+
+# =============================================================================
+# Messages Configuration
+# Supports MiniMessage (<red>, <gradient:red:blue>, <#ff0000>) and Legacy (&c)
+# Available placeholders: {player}, {command}, {time}, {error}, {server}
+# =============================================================================
+messages:
+  block-message: '<red>This command is blocked.'
+  reload-success: '<green>CommandBlocker has been reloaded successfully!'
+  reload-error: '<red>Error reloading configuration: {error}'
+  no-permission: '<red>You don''t have permission to use this command.'
+  console-reload: 'Configuration reloaded by {player}'
+
+# =============================================================================
+# Permissions Configuration
+# - commandblocker.bypass: Full bypass (blocks & cooldowns)
+# - commandblocker.bypass.block: Bypass blocked commands check only
+# - commandblocker.bypass.cooldown: Bypass cooldown check only
+# - commandblocker.reload: Allows reloading the plugin
+# - commandblocker.notify: Receives notifications
+# =============================================================================
+permissions:
+  bypass-all: 'commandblocker.bypass'
+  bypass-block: 'commandblocker.bypass.block'
+  bypass-cooldown: 'commandblocker.bypass.cooldown'
+  notify: 'commandblocker.notify'
+
+# =============================================================================
+# Alias Detection Configuration
+# Prevents players from bypassing command blocks using aliases
+# =============================================================================
+alias-detection:
+  enabled: true              # Master switch for alias detection
+  block-help-subcommand: true    # Blocks commands like "op help"
+  block-plugin-prefix: true      # Blocks commands like "minecraft:op"
+
+# =============================================================================
+# Blocked Commands List
+# Add commands without the '/' prefix
+# Supports three formats:
+#   - Plain:    'op'                    (exact match)
+#   - Wildcard: 'wildcard:game*'        (glob pattern, * = any chars, ? = single char)
+#   - Regex:    'regex:game(mode)?.*'   (Java regex, case-insensitive)
+# =============================================================================
+blocked-commands:
+  - 'op'
+  - 'deop'
+  - 'reload'
+  - 'rl'
+  - 'timings'
+  - 'plugins'
+  - 'pl'
+  # WARNING: 'execute' can be used to run blocked commands indirectly (e.g. /execute run op)
+  - 'execute'
+  # Examples of pattern matching:
+  # - 'wildcard:game*'          # blocks gamemode, gm, gamemode1, etc.
+  # - 'regex:ban(ip|list)?'     # blocks ban, banip, banlist
+
+# =============================================================================
+# Per-Command Custom Messages
+# Override the block message for specific commands.
+# If a command is not listed here, the default block-message is used.
+# Supports MiniMessage and Legacy '&' color codes.
+# =============================================================================
+custom-messages:
+  enabled: false
+  commands:
+    # op: '<red>You are not allowed to use the OP command.'
+    # plugins: '<red>Plugin list is hidden on this server.'
+    # pl: '<red>Plugin list is hidden on this server.'
+
+# =============================================================================
+# Allowed Commands List
+# Commands in this list will be allowed regardless of other settings
+# =============================================================================
+allowed-commands-settings:
+  enabled: true
+  commands:
+    - 'help'
+    - 'ping'
+
+# =============================================================================
+# Cooldown System Configuration
+# Prevents command spam by limiting attempts
+# =============================================================================
+cooldown:
+  enabled: true
+  max-attempts: 3
+  timeout-duration: 300     # Seconds
+  reset-after: 600         # Seconds
+  timeout-message: '<red>You have exceeded the attempt limit. Wait <yellow>{time} <red>to try again.'
+
+# =============================================================================
+# Auto-Punishments
+# Automatically execute commands when a player exceeds attempt thresholds.
+# Thresholds are cumulative and reset with the cooldown system.
+# Available placeholders: {player}
+# =============================================================================
+auto-punishments:
+  enabled: false
+  actions:
+    # - threshold: 5
+    #   command: 'kick {player} Attempting to use blocked commands'
+    # - threshold: 10
+    #   command: 'ban {player} Repeated use of blocked commands'
+
+# =============================================================================
+# Database Configuration (SQLite or MySQL)
+# Used to persist cooldowns across restarts
+# =============================================================================
+database:
+  enabled: false
+  type: "sqlite" # or "mysql"
+  host: "localhost"
+  port: 3306
+  user: "root"
+  password: ""
+  database: "minecraft"
+  table-prefix: "cb_"
+  # Advanced Settings
+  use-ssl: false            # Set to true if your database supports/requires SSL
+  auto-reconnect: true      # Automatically try to reconnect if connection is lost
+  max-pool-size: 10         # Maximum number of connections in the pool
+  connection-timeout: 30000 # Milliseconds to wait for a connection
+  thread-pool-size: 4       # Number of threads for async DB/webhook operations (1-32)
+
+# =============================================================================
+# Staff Notification System
+# Alerts staff members when players try to use blocked commands
+# =============================================================================
+notifications:
+  enabled: true
+  notify-on-timeout: true
+  # Available placeholders: {player}, {command}, {server}
+  command-message: '<yellow>{player} <gray>tried to use blocked command: <red>{command} <dark_gray>(<gray>{server}<dark_gray>)'
+  timeout-message: '<yellow>{player} <gray>has been timed out for exceeding attempts.'
+
+# =============================================================================
+# Interactive Staff Notifications
+# Clickable actions appended to the notification message
+# =============================================================================
+notification-actions:
+  enabled: true
+  # Actions list. You can add as many as you want.
+  # Command placeholders: {player}
+  actions:
+    - label: " <dark_gray>[<red>KICK<dark_gray>]"
+      hover: "<red>Click to Kick {player}"
+      command: "/kick {player} Using blocked commands"
+    - label: " <dark_gray>[<dark_red>BAN<dark_gray>]"
+      hover: "<dark_red>Click to Ban {player}"
+      command: "/ban {player} Blocked Commands"
+    - label: " <dark_gray>[<gold>TEMP-BAN<dark_gray>]"
+      hover: "<gold>Click to Temp-Ban {player}"
+      command: "/tempban {player} 1d Blocked Commands"
+
+# =============================================================================
+# Discord Webhook Integration
+# Sends alerts to a Discord channel
+# =============================================================================
+discord-webhook:
+  enabled: false
+  url: ""
+  username: "CommandBlocker"
+  avatar-url: "https://i.imgur.com/example.png"
+  # Available placeholders: {player}, {command}, {server}, {uuid}, {timestamp}
+  content: "**{player}** tried to use blocked command: `{command}` on server `{server}`"
+  rate-limit: 10            # Seconds between webhook messages per player (1-300)
+  # Retry on Discord 429 (rate limited) or 5xx errors.
+  # Max 3 total attempts with exponential backoff: immediate -> 2s -> 4s.
+
+# =============================================================================
+# Server-specific Command Blocking
+# Block additional commands only when a player is on a specific backend server.
+# Keys must match the server name exactly as configured in BungeeCord/Velocity.
+# Commands here are ADDITIVE to the global blocked-commands list.
+# =============================================================================
+server-blocked-commands:
+  # Example: block /kit and /spawn only on the lobby server
+  # lobby:
+  #   - 'kit'
+  #   - 'spawn'
+  # hub:
+  #   - 'warp'
+
+# =============================================================================
+# Tab-Complete Whitelist Mode
+# When enabled, ALL tab-complete suggestions are hidden EXCEPT for commands
+# in the allowed list. This is useful for hiding your server's plugin stack.
+# Note: Players with the bypass-all permission are not affected.
+# =============================================================================
+tab-complete-whitelist:
+  enabled: false
+  # Commands that will still show in tab-complete (without '/' prefix)
+  # allowed:
+  #   - 'help'
+  #   - 'msg'
+  #   - 'tell'
+  #   - 'ping'
+
+# =============================================================================
+# Audit Log
+# Writes blocked command and timeout events to date-rolling log files.
+# Files are stored in: plugins/CommandBlockerVelocity/logs/YYYY-MM-DD.log
+# =============================================================================
+audit-log:
+  enabled: false
+  max-files: 30             # How many daily log files to keep (1-365)

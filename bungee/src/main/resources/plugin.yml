@@ -1,0 +1,37 @@
+name: CommandBlockerBungee
+version: 2.4.0
+main: com.wish.commandblockerbungee.CommandBlockerBungee
+author: wwishhdev
+description: A plugin to block commands in BungeeCord
+
+permissions:
+  commandblocker.*:
+    description: Gives access to all CommandBlocker features
+    children:
+      commandblocker.bypass: true
+      commandblocker.bypass.block: true
+      commandblocker.bypass.cooldown: true
+      commandblocker.reload: true
+      commandblocker.notify: true
+      commandblocker.admin: true
+  commandblocker.bypass:
+    description: Full bypass (blocks and cooldowns)
+    default: op
+    children:
+      commandblocker.bypass.block: true
+      commandblocker.bypass.cooldown: true
+  commandblocker.bypass.block:
+    description: Allows using blocked commands
+    default: op
+  commandblocker.bypass.cooldown:
+    description: Bypasses the cooldown/timeout check
+    default: op
+  commandblocker.reload:
+    description: Allows reloading the plugin configuration
+    default: op
+  commandblocker.notify:
+    description: Receives notifications when someone tries to use blocked commands
+    default: op
+  commandblocker.admin:
+    description: Allows viewing CommandBlocker status diagnostics
+    default: op
