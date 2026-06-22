@@ -24,6 +24,7 @@ public class ReloadCommand implements SimpleCommand {
                 config.loadConfiguration();
                 plugin.getDatabaseManager().reload();
                 plugin.getWebhookManager().reload();
+                plugin.getProxyMessagingManager().reload();
                 source.sendMessage(config.getReloadSuccessMessage());
                 
                 String playerName = (source instanceof Player) ? ((Player) source).getUsername() : "Console";

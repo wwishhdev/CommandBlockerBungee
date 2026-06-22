@@ -4,6 +4,31 @@ All notable changes to CommandBlockerBungee & CommandBlockerVelocity will be doc
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Added an optional Velocity `proxy-messaging` module for global `/msg`, `/tell`, `/w`, `/m`, and `/r` private messages across all backend servers, disabled by default and configurable with Spanish MiniMessage messages.
+
+### Changed
+
+- Replaced the corrupted BungeeCord startup banner with an ASCII MiniMessage/Adventure banner and removed the remaining `ChatColor` usage from startup output.
+- Registered Velocity command and tab-complete listeners with explicit event priority instead of deprecated `Subscribe.order()`.
+
+### Fixed
+
+- Fixed `/cbstatus` reporting `v2.3.0` even though both modules are version `2.4.0`.
+- Fixed Velocity 1.13+ command-list filtering by handling `PlayerAvailableCommandsEvent`, so blocked or non-whitelisted root commands are removed from the Brigadier command tree shown when pressing tab after `/`.
+- Fixed Velocity tab-complete whitelist mode so allowed commands are also added to the available command tree when the backend/proxy did not already provide them.
+- Added Velocity player-name suggestions for whitelisted private-message command roots such as `/msg` and `/tell`.
+- Reused command matching normalization for tab-complete filtering in both modules, including blocked command suggestions when whitelist mode is disabled.
+
+### Tests
+
+- Added unit coverage for tab-complete filtering rules in both BungeeCord and Velocity command matchers.
+
+---
+
 ## [2.4.0] - 2026-04-16
 
 ### Added

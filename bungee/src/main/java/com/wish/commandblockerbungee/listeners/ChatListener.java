@@ -1,8 +1,6 @@
 package com.wish.commandblockerbungee.listeners;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
 
 import com.wish.commandblockerbungee.CommandBlockerBungee;
 import com.wish.commandblockerbungee.managers.ConfigManager;
@@ -135,29 +133,17 @@ public class ChatListener implements Listener {
         ProxiedPlayer player = (ProxiedPlayer) event.getSender();
         if (player.hasPermission(config.getBypassAllPermission())) return;
 
-        if (config.isTabCompleteWhitelistEnabled()) {
-            List<String> allowed = config.getTabCompleteWhitelistAllowed();
-            event.getSuggestions().removeIf(suggestion -> {
-                String cmd = suggestion.toLowerCase(Locale.ROOT);
-                if (cmd.startsWith("/")) cmd = cmd.substring(1);
-                String finalCmd = cmd;
-                return allowed.stream()
-                        .filter(Objects::nonNull)
-                        .noneMatch(a -> finalCmd.equalsIgnoreCase(a) || finalCmd.startsWith(a.toLowerCase(Locale.ROOT) + " "));
-            });
-            return;
-        }
-
-        String cursor = event.getCursor().toLowerCase(Locale.ROOT);
-        if (cursor.startsWith("/")) cursor = cursor.substring(1);
-
-        String[] parts = cursor.trim().split("(?U)\\s+", 2);
-        String base = parts[0];
-
         String serverName = player.getServer() != null ? player.getServer().getInfo().getName() : "unknown";
+        boolean bypassBlock = player.hasPermission(config.getBypassBlockPermission());
+        boolean whitelistEnabled = config.isTabCompleteWhitelistEnabled();
+        List<String> whitelistAllowed = config.getTabCompleteWhitelistAllowed();
 
-        if (commandMatcher.isCommandBlocked(base, serverName)) {
-            if (player.hasPermission(config.getBypassBlockPermission())) return;
+        event.getSuggestions().removeIf(suggestion ->
+                commandMatcher.shouldHideTabSuggestion(suggestion, serverName, whitelistEnabled, whitelistAllowed)
+                        && !(bypassBlock && !whitelistEnabled));
+
+        if (!whitelistEnabled && !bypassBlock
+                && commandMatcher.isCommandBlocked(event.getCursor(), serverName)) {
             event.setCancelled(true);
             event.getSuggestions().clear();
         }

@@ -17,10 +17,11 @@ import com.wish.commandblockerbungee.managers.WebhookManager;
 import com.wish.commandblockerbungee.utils.FileLogger;
 
 import net.kyori.adventure.platform.bungeecord.BungeeAudiences;
-import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.plugin.Plugin;
 
 public class CommandBlockerBungee extends Plugin {
+
+    public static final String VERSION = "2.4.0";
 
     private ConfigManager configManager;
     private CooldownManager cooldownManager;
@@ -42,23 +43,19 @@ public class CommandBlockerBungee extends Plugin {
         // Initialize Adventure
         this.adventure = BungeeAudiences.create(this);
 
-        // ASCII Art
-        getProxy().getConsole().sendMessage(new net.md_5.bungee.api.chat.TextComponent(
-                ChatColor.GOLD + "\n" +
-                " ██████╗ ██████╗ ███╗   ███╗███╗   ███╗ █████╗ ███╗   ██╗██████╗ ██████╗ ██╗      ██████╗  ██████╗██╗  ██╗███████╗██████╗ \n" +
-                "██╔════╝██╔═══██╗████╗ ████║████╗ ████║██╔══██╗████╗  ██║██╔══██╗██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗\n" +
-                "██║     ██║   ██║██╔████╔██║██╔████╔██║███████║██╔██╗ ██║██║  ██║██████╔╝██║     ██║   ██║██║     █████╔╝ █████╗  ██████╔╝\n" +
-                "██║     ██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║  ██║██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗\n" +
-                "╚██████╗╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║██████╔╝██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗██║  ██║\n" +
-                " ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n" +
-                ChatColor.YELLOW + "                CommandBlockerBungee v2.4.0 " + ChatColor.RED + "❤\n" +
-                ChatColor.AQUA + "                                                          by wwishhdev\n"
-        ));
-
+        adventure().sender(getProxy().getConsole()).sendMessage(configManager.parse(
+                "<gold>\n"
+                        + "  ____                                          _ ____  _            _\n"
+                        + " / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| | __ )| | ___   ___| | _____ _ __\n"
+                        + "| |   / _ \\| '_ ` _ \\| '_ ` _ \\ / _` | '_ \\ / _` |  _ \\| |/ _ \\ / __| |/ / _ \\ '__|\n"
+                        + "| |__| (_) | | | | | | | | | | | (_| | | | | (_| | |_) | | (_) | (__|   <  __/ |\n"
+                        + " \\____\\___/|_| |_| |_|_| |_| |_|\\__,_|_| |_|\\__,_|____/|_|\\___/ \\___|_|\\_\\___|_|\n"
+                        + "<yellow>                CommandBlockerBungee v" + VERSION + "\n"
+                        + "<aqua>                                                          by wwishhdev\n"));
 
         this.databaseManager = new DatabaseManager(this, configManager, executorService);
         this.databaseManager.init();
-        
+
         this.webhookManager = new WebhookManager(this, configManager, executorService);
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
@@ -92,7 +89,7 @@ public class CommandBlockerBungee extends Plugin {
         if (databaseManager != null) {
             databaseManager.close();
         }
-        
+
         if (executorService != null) {
             executorService.shutdown();
             try {
@@ -103,7 +100,7 @@ public class CommandBlockerBungee extends Plugin {
                 executorService.shutdownNow();
             }
         }
-        
+
         getLogger().info("CommandBlockerBungee has been disabled!");
     }
 

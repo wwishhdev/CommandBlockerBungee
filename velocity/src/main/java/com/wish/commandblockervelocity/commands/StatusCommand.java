@@ -36,7 +36,7 @@ public class StatusCommand implements SimpleCommand {
         int onlinePlayers = plugin.getProxy().getPlayerCount();
 
         String status = "<gray>----------------------------------------\n"
-                + "<gold><bold>CommandBlocker</bold></gold> <gray>v2.3.0 Status\n"
+                + "<gold><bold>CommandBlocker</bold></gold> <gray>v" + CommandBlockerVelocity.VERSION + " Status\n"
                 + "<gray>----------------------------------------\n"
                 + "<yellow>Blocked Commands: <white>" + blockedCount + " global"
                 + (serverSpecific > 0 ? " + " + serverSpecific + " server-specific" : "") + "\n"

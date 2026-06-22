@@ -90,6 +90,17 @@ public final class CommandMatcher {
         return baseCommand;
     }
 
+    public boolean shouldHideTabSuggestion(String suggestion, String serverName, boolean whitelistEnabled, List<String> whitelistAllowed) {
+        String cleanSuggestion = normalize(suggestion);
+        if (cleanSuggestion.isEmpty()) return false;
+
+        if (whitelistEnabled) {
+            return !isWhitelistedTabSuggestion(cleanSuggestion, whitelistAllowed);
+        }
+
+        return isCommandBlocked(cleanSuggestion, serverName);
+    }
+
     private String normalize(String command) {
         if (command == null || command.trim().isEmpty()) return "";
 
@@ -98,6 +109,17 @@ public final class CommandMatcher {
         cleanCommand = INVISIBLE_CHARS.matcher(cleanCommand).replaceAll("");
         cleanCommand = COLON_SPACING.matcher(cleanCommand.trim()).replaceAll(":");
         return cleanCommand.trim();
+    }
+
+    private boolean isWhitelistedTabSuggestion(String cleanSuggestion, List<String> whitelistAllowed) {
+        for (String allowed : safeList(whitelistAllowed)) {
+            String cleanAllowed = normalize(allowed);
+            if (cleanAllowed.isEmpty()) continue;
+            if (cleanSuggestion.equals(cleanAllowed) || cleanSuggestion.startsWith(cleanAllowed + " ")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isAllowed(String baseCommand, String cleanCommand) {

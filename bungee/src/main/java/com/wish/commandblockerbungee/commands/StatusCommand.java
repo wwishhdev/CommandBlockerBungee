@@ -42,7 +42,7 @@ public class StatusCommand extends Command {
         int onlinePlayers = plugin.getProxy().getOnlineCount();
 
         String status = "<gray>----------------------------------------\n"
-                + "<gold><bold>CommandBlocker</bold></gold> <gray>v2.3.0 Status\n"
+                + "<gold><bold>CommandBlocker</bold></gold> <gray>v" + CommandBlockerBungee.VERSION + " Status\n"
                 + "<gray>----------------------------------------\n"
                 + "<yellow>Blocked Commands: <white>" + blockedCount + " global"
                 + (serverSpecific > 0 ? " + " + serverSpecific + " server-specific" : "") + "\n"

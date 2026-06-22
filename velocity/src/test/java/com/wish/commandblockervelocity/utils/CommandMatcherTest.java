@@ -83,6 +83,23 @@ class CommandMatcherTest {
         assertEquals("op", matcher.getBaseCommandForMessage("//minecraft : o\u200Bp help"));
     }
 
+    @Test
+    void hidesNonWhitelistedTabSuggestions() {
+        assertFalse(matcher.shouldHideTabSuggestion("/msg", "lobby", true, List.of("msg", "ping")));
+        assertFalse(matcher.shouldHideTabSuggestion("ping Steve", "lobby", true, List.of("msg", "ping")));
+        assertTrue(matcher.shouldHideTabSuggestion("/plugins", "lobby", true, List.of("msg", "ping")));
+        assertTrue(matcher.shouldHideTabSuggestion("minecraft:op", "lobby", true, List.of("msg", "ping")));
+    }
+
+    @Test
+    void hidesBlockedTabSuggestionsWithoutWhitelist() {
+        rules.blocked = List.of("op", "plugins", "velocity");
+
+        assertTrue(matcher.shouldHideTabSuggestion("/plugins", "lobby", false, List.of()));
+        assertTrue(matcher.shouldHideTabSuggestion("minecraft:op", "lobby", false, List.of()));
+        assertFalse(matcher.shouldHideTabSuggestion("/msg", "lobby", false, List.of()));
+    }
+
     private static final class TestRules implements CommandMatcher.Rules {
         private List<String> allowed = new ArrayList<>();
         private List<String> blocked = new ArrayList<>();

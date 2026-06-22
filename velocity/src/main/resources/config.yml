@@ -58,11 +58,48 @@ blocked-commands:
   - 'timings'
   - 'plugins'
   - 'pl'
-  # WARNING: 'execute' can be used to run blocked commands indirectly (e.g. /execute run op)
   - 'execute'
-  # Examples of pattern matching:
-  # - 'wildcard:game*'          # blocks gamemode, gm, gamemode1, etc.
-  # - 'regex:ban(ip|list)?'     # blocks ban, banip, banlist
+  - 'ef'
+  - 'me'
+  - 'whisper'
+  - 'exploitfixer'
+  - 'bukkit:about'
+  - 'spigot:about'
+  - 'transfer'
+  - 'send'
+  - 'find'
+  - 'alert'
+  - 'glist'
+  - 'vulcan'
+  - 'purpur'
+  - 'spark'
+  - 'aegisauth'
+  - 'authadmin'
+  # Nuevos comandos bloqueados
+  - 'ab'
+  - 'antibot'
+  - 'auth'
+  - 'authstatus'
+  - 'bungee'
+  - 'bungeecord'
+  - 'geyser'
+  - 'litebans'
+  - 'litebans:litebans'
+  - 'logout'
+  - 'lpv'
+  - 'luckpermsvelocity'
+  - 'nantibot'
+  - 'prison'
+  - 'prisonop'
+  - 'return'
+  - 'server'
+  - 'skin'
+  - 'skins'
+  - 'velo'
+  - 'velocity'
+  - 'velocity:callback'
+  - 'veloflame'
+  - 'lpx'
 
 # =============================================================================
 # Per-Command Custom Messages
@@ -84,7 +121,6 @@ custom-messages:
 allowed-commands-settings:
   enabled: true
   commands:
-    - 'help'
     - 'ping'
 
 # =============================================================================
@@ -117,13 +153,13 @@ auto-punishments:
 # Used to persist cooldowns across restarts
 # =============================================================================
 database:
-  enabled: false
-  type: "sqlite" # or "mysql"
-  host: "localhost"
+  enabled: true
+  type: "mysql" # or "mysql"
+  host: "nodo.nexuhost.net"
   port: 3306
-  user: "root"
-  password: ""
-  database: "minecraft"
+  user: "u139_tibnwKgLun"
+  password: "3!ypZ4clN6AFUiu=NI1FQsWR"
+  database: "s139_commandblocker"
   table-prefix: "cb_"
   # Advanced Settings
   use-ssl: false            # Set to true if your database supports/requires SSL
@@ -167,8 +203,8 @@ notification-actions:
 # Sends alerts to a Discord channel
 # =============================================================================
 discord-webhook:
-  enabled: false
-  url: ""
+  enabled: true
+  url: "https://discord.com/api/webhooks/1499872289859178668/S597nHG1-UVBFKtRc2eDk-_4SrXiPqdx--NpANCywL0fisRw_NTYs7XQSAZE4mcnpZlz"
   username: "CommandBlocker"
   avatar-url: "https://i.imgur.com/example.png"
   # Available placeholders: {player}, {command}, {server}, {uuid}, {timestamp}
@@ -198,19 +234,57 @@ server-blocked-commands:
 # Note: Players with the bypass-all permission are not affected.
 # =============================================================================
 tab-complete-whitelist:
-  enabled: false
-  # Commands that will still show in tab-complete (without '/' prefix)
-  # allowed:
-  #   - 'help'
-  #   - 'msg'
-  #   - 'tell'
-  #   - 'ping'
+  enabled: true
+  allowed:
+    - 'msg'
+    - 'tell'
+    - 'r'
+    - 'ping'
+    - 'lobby'
+    - 'hub'
+    - 'spawn'
+  # Comandos que deben sugerir jugadores globales del proxy como primer argumento.
+  player-suggestions:
+    - 'msg'
+    - 'tell'
+    - 'w'
+    - 'm'
 
+# =============================================================================
+# Mensajes privados del proxy
+# Mensajeria privada global manejada por Velocity.
+# Viene desactivado por defecto. Activalo si queres que /msg y /r funcionen
+# entre todos los servidores backend sin Essentials u otro plugin de mensajes.
+# Los permisos vienen vacios por defecto para que todos puedan usar los comandos.
+# =============================================================================
+proxy-messaging:
+  enabled: false
+  commands:
+    msg:
+      aliases:
+        - 'tell'
+        - 'w'
+        - 'm'
+    reply:
+      aliases:
+        - 'r'
+  permissions:
+    message: ''
+    reply: ''
+  messages:
+    sent: '<gray>[<yellow>Para {target}<gray>] <white>{message}'
+    received: '<gray>[<yellow>De {player}<gray>] <white>{message}'
+    no-permission: '<red>No tenes permiso para usar este comando.'
+    usage: '<red>Uso: /msg <jugador> <mensaje>'
+    reply-usage: '<red>Uso: /r <mensaje>'
+    player-not-found: '<red>Ese jugador no esta conectado.'
+    self-message: '<red>No podes enviarte mensajes a vos mismo.'
+    no-reply-target: '<red>No tenes nadie a quien responder.'
 # =============================================================================
 # Audit Log
 # Writes blocked command and timeout events to date-rolling log files.
 # Files are stored in: plugins/CommandBlockerVelocity/logs/YYYY-MM-DD.log
 # =============================================================================
 audit-log:
-  enabled: false
+  enabled: true
   max-files: 30             # How many daily log files to keep (1-365)

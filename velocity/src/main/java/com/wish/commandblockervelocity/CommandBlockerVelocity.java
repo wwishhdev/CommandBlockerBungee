@@ -12,6 +12,9 @@ import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.command.CommandMeta;
 import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.command.CommandExecuteEvent;
+import com.velocitypowered.api.event.command.PlayerAvailableCommandsEvent;
+import com.velocitypowered.api.event.player.TabCompleteEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
@@ -24,6 +27,7 @@ import com.wish.commandblockervelocity.listeners.ChatListener;
 import com.wish.commandblockervelocity.listeners.ConnectionListener;
 import com.wish.commandblockervelocity.managers.ConfigManager;
 import com.wish.commandblockervelocity.managers.CooldownManager;
+import com.wish.commandblockervelocity.managers.ProxyMessagingManager;
 import com.wish.commandblockervelocity.managers.WebhookManager;
 import com.wish.commandblockervelocity.utils.FileLogger;
 
@@ -36,6 +40,9 @@ import com.wish.commandblockervelocity.utils.FileLogger;
 )
 public class CommandBlockerVelocity {
 
+    public static final String VERSION = "2.4.0";
+    private static final short LATE_EVENT_PRIORITY = -100;
+
     private final ProxyServer proxy;
     private final Logger logger;
     private final Path dataDirectory;
@@ -46,6 +53,7 @@ public class CommandBlockerVelocity {
     private CooldownManager cooldownManager;
     private DatabaseManager databaseManager;
     private WebhookManager webhookManager;
+    private ProxyMessagingManager proxyMessagingManager;
     private FileLogger fileLogger;
 
     @Inject
@@ -85,10 +93,16 @@ public class CommandBlockerVelocity {
 
         this.cooldownManager = new CooldownManager(this, configManager, databaseManager);
 
+        this.proxyMessagingManager = new ProxyMessagingManager(this, configManager);
+        this.proxyMessagingManager.register();
+
         this.fileLogger = new FileLogger(dataDirectory, executorService, logger, configManager.getAuditLogMaxFiles());
 
         // Listeners
-        proxy.getEventManager().register(this, new ChatListener(this, configManager, cooldownManager, webhookManager, fileLogger));
+        ChatListener chatListener = new ChatListener(this, configManager, cooldownManager, webhookManager, fileLogger);
+        proxy.getEventManager().register(this, CommandExecuteEvent.class, LATE_EVENT_PRIORITY, chatListener::onCommandExecute);
+        proxy.getEventManager().register(this, TabCompleteEvent.class, LATE_EVENT_PRIORITY, chatListener::onTabComplete);
+        proxy.getEventManager().register(this, PlayerAvailableCommandsEvent.class, LATE_EVENT_PRIORITY, chatListener::onPlayerAvailableCommands);
         proxy.getEventManager().register(this, new ConnectionListener(cooldownManager));
 
         // Commands
@@ -123,6 +137,9 @@ public class CommandBlockerVelocity {
         if (databaseManager != null) {
             databaseManager.close();
         }
+        if (proxyMessagingManager != null) {
+            proxyMessagingManager.unregister();
+        }
         
         if (executorService != null) {
             executorService.shutdown();
@@ -156,5 +173,9 @@ public class CommandBlockerVelocity {
 
     public WebhookManager getWebhookManager() {
         return webhookManager;
+    }
+
+    public ProxyMessagingManager getProxyMessagingManager() {
+        return proxyMessagingManager;
     }
 }

@@ -442,6 +442,71 @@ public class ConfigManager {
         return getStringList("tab-complete-whitelist", "allowed");
     }
 
+    public List<String> getTabCompletePlayerSuggestionCommands() {
+        List<String> configured = getStringList("tab-complete-whitelist", "player-suggestions");
+        if (!configured.isEmpty()) {
+            return configured;
+        }
+        return List.of("msg", "tell", "w", "m");
+    }
+
+    // ========================================================================
+    // Proxy Messaging
+    // ========================================================================
+    public boolean isProxyMessagingEnabled() {
+        return getBoolean(false, "proxy-messaging", "enabled");
+    }
+
+    public List<String> getProxyMessagingAliases() {
+        List<String> aliases = getStringList("proxy-messaging", "commands", "msg", "aliases");
+        return aliases.isEmpty() ? List.of("tell", "w", "m") : aliases;
+    }
+
+    public List<String> getProxyMessagingReplyAliases() {
+        List<String> aliases = getStringList("proxy-messaging", "commands", "reply", "aliases");
+        return aliases.isEmpty() ? List.of("r") : aliases;
+    }
+
+    public String getProxyMessagingPermission() {
+        return getString("", "proxy-messaging", "permissions", "message");
+    }
+
+    public String getProxyMessagingReplyPermission() {
+        return getString("", "proxy-messaging", "permissions", "reply");
+    }
+
+    public String getProxyMessagingSentMessageRaw() {
+        return getString("<gray>[<yellow>Para {target}<gray>] <white>{message}", "proxy-messaging", "messages", "sent");
+    }
+
+    public String getProxyMessagingReceivedMessageRaw() {
+        return getString("<gray>[<yellow>De {player}<gray>] <white>{message}", "proxy-messaging", "messages", "received");
+    }
+
+    public String getProxyMessagingNoPermissionRaw() {
+        return getString("<red>No tenes permiso para usar este comando.", "proxy-messaging", "messages", "no-permission");
+    }
+
+    public String getProxyMessagingUsageRaw() {
+        return getString("<red>Uso: /msg <jugador> <mensaje>", "proxy-messaging", "messages", "usage");
+    }
+
+    public String getProxyMessagingReplyUsageRaw() {
+        return getString("<red>Uso: /r <mensaje>", "proxy-messaging", "messages", "reply-usage");
+    }
+
+    public String getProxyMessagingPlayerNotFoundRaw() {
+        return getString("<red>Ese jugador no esta conectado.", "proxy-messaging", "messages", "player-not-found");
+    }
+
+    public String getProxyMessagingSelfMessageRaw() {
+        return getString("<red>No podes enviarte mensajes a vos mismo.", "proxy-messaging", "messages", "self-message");
+    }
+
+    public String getProxyMessagingNoReplyTargetRaw() {
+        return getString("<red>No tenes nadie a quien responder.", "proxy-messaging", "messages", "no-reply-target");
+    }
+
     // ========================================================================
     // Granular Permissions
     // ========================================================================
