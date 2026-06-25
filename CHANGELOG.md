@@ -10,6 +10,14 @@ All notable changes to CommandBlockerBungee & CommandBlockerVelocity will be doc
 
 - Added an optional Velocity `proxy-messaging` module for global `/msg`, `/tell`, `/w`, `/m`, and `/r` private messages across all backend servers, disabled by default and configurable with Spanish MiniMessage messages.
 
+### Removed
+
+- Removed `.github/workflows` directory from the repository.
+
+### Security
+
+- Replaced production MySQL credentials and Discord webhook URL in Velocity's default `config.yml` resource file with generic placeholder values.
+
 ### Changed
 
 - Replaced the corrupted BungeeCord startup banner with an ASCII MiniMessage/Adventure banner and removed the remaining `ChatColor` usage from startup output.
