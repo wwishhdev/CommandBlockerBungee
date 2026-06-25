@@ -153,13 +153,13 @@ auto-punishments:
 # Used to persist cooldowns across restarts
 # =============================================================================
 database:
-  enabled: true
-  type: "mysql" # or "mysql"
-  host: "nodo.nexuhost.net"
+  enabled: false
+  type: "sqlite" # or "mysql"
+  host: "localhost"
   port: 3306
-  user: "u139_tibnwKgLun"
-  password: "3!ypZ4clN6AFUiu=NI1FQsWR"
-  database: "s139_commandblocker"
+  user: "root"
+  password: ""
+  database: "minecraft"
   table-prefix: "cb_"
   # Advanced Settings
   use-ssl: false            # Set to true if your database supports/requires SSL
@@ -203,8 +203,8 @@ notification-actions:
 # Sends alerts to a Discord channel
 # =============================================================================
 discord-webhook:
-  enabled: true
-  url: "https://discord.com/api/webhooks/1499872289859178668/S597nHG1-UVBFKtRc2eDk-_4SrXiPqdx--NpANCywL0fisRw_NTYs7XQSAZE4mcnpZlz"
+  enabled: false
+  url: ""
   username: "CommandBlocker"
   avatar-url: "https://i.imgur.com/example.png"
   # Available placeholders: {player}, {command}, {server}, {uuid}, {timestamp}
